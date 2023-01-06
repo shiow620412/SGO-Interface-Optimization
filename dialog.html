@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="style.css"></link>
+</head>
+<body>
+
+    <!-- <div class="wrapper" style="display: none;"> -->
+    <div class="wrapper" style="">
+        <div class="dialog">
+            <div class="header">
+                <h1>SGO介面優化插件 Ver1.3</h1>
+                <div>
+                    <button id="reset-settings-btn">RESET</button>
+                    <button id="close-dialog-btn">X</button>
+                </div>
+            </div>
+            <div class="content">
+                <div class="panel">
+                    <div class="panel-header">
+                        <span>一般</span>
+                    </div>
+                    <div class="panel-body">
+                        <p class="description">
+                            一般功能的開啟與關閉
+                        </p>
+                        <div class="row">
+                            <input type="checkbox" id="bad-button">
+                            <label for="bad-button">禁用搶劫與超渡按鍵</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <span>顏色</span>
+                    </div>
+                    <div class="panel-body">
+                        <p class="description">
+                            設定插件各種提示的顏色
+                        </p>
+                        <div class="row">
+                            <label for="tips">一般提示</label>
+                            <input type="text" id="tips">
+                            <p>我是顏文字</p>
+                        </div>
+                        <div class="row">
+                            <label for="warning">紅色警告</label>
+                            <input type="text" id="warning">
+                            <p>我是顏文字</p>
+                        </div>
+                        <div class="row">
+                            <label for="true-stats">裝備原始素質</label>
+                            <input type="text" id="true-stats">
+                            <p>我是顏文字</p>
+                        </div>
+                        <div class="row">
+                            <label for="zone-level">到達新樓層</label>
+                            <input type="text" id="zone-level">
+                            <p>我是顏文字</p>
+                        </div>
+                    </div>
+                </div>
+               
+                <div class="panel">
+                    <div class="panel-header">
+                        <span>警示</span>
+                    </div>
+                    <div class="panel-body">
+                        <p class="description">
+                            設定警示功能的數值
+                        </p>
+                        <div class="row">
+                            <label for="equipment">裝備耐久低於(數值)</label>
+                            <input type="text" id="equipment">
+                        </div>
+                        <div class="row">
+                            <label for="hp">血量單次耗損(百分比)</label>
+                            <input type="text" id="hp">
+                        </div>
+                    </div>
+                </div>
+              
+            </div>
+        </div>
+    </div>
+
+    <button id="open-dialog-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-settings" width="50" height="50" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+            <path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+    </button>
+</body>
+</html>

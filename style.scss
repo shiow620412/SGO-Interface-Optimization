@@ -1,0 +1,146 @@
+* {
+    box-sizing: border-box;
+}
+
+.wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background-color: rgba(15, 19, 26, .8);
+    height: 100vh;
+
+    position: fixed;
+    width: 100%;
+    /* height: 100%; */
+    left: 0;
+    top: 0;
+    overflow: auto;
+    z-index: 9999;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    margin: 1rem 1rem 0 1rem;;
+    button {
+        height: 100%;
+    }
+    h1 {
+        color: #fff;
+    }
+    #reset-settings-btn {
+        border: 1px solid #3c3f43;
+        margin-right: 1rem;
+    }
+}
+
+.content {
+    display: flex;
+    margin: 0 1rem 1rem 1rem;
+    flex-direction: column;
+    hr{
+        width: 100%;
+    }
+}
+
+.panel {
+    position: relative;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+
+    input[type=checkbox] {
+        margin: 0.5rem;
+    }
+    input[type=text]{
+      
+        background-color: #1a1d24;
+        background-image: none;
+        border: 1px solid #3c3f43;
+        border-radius: 6px;
+        color: #e9ebf0;
+        display: block;
+        font-size: 14px;
+        line-height: 1.42857143;
+        padding: 7px 11px;
+        transition: border-color .3s ease-in-out;
+        width: 100px;
+        
+    }
+}
+
+.panel + .panel::before {
+   
+        border-top: 1px solid #3c3f43;
+        content: "";
+        left: 20px;
+        position: absolute;
+        right: 20px;
+        top: 0;
+   
+}
+.panel-header{
+    width: 100%;
+    padding: 20px;
+    span {
+       
+        color: #fff;
+        font-size: 16px;
+        line-height: 1.25;
+    }
+}
+
+.panel-body {
+    padding: 0 20px 20px 20px;
+}
+.description {
+    margin: 0px;
+    color: #a4a9b3;
+    line-height: 1.5;
+    font-size: 8px;
+}
+.dialog {
+    width: 800px;
+    height: 500px;
+    left: 0;
+    top: 0;
+    overflow: auto;
+    z-index: 9999;
+
+    background-color: #292d33;
+    border-radius: 6px;
+    box-shadow: 0 4px 4px rgba(0,0,0,.12),0 0 10px rgba(0,0,0,.06);
+}
+
+.row {
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    label{
+        color: #a4a9b3;
+        margin-right: 1rem;
+    }
+    input {
+        margin-right: 1rem;
+    }
+    
+}
+
+
+#open-dialog-btn{
+    position: sticky;
+    left: 100%;
+    bottom: 0;
+    margin-right: 1rem;
+    // margin-bottom: 1rem;
+    z-index: 9998;
+    color: #7d7d7d;
+    background-color: transparent;
+    border: none;
+
+   
+}
+#open-dialog-btn:hover{
+    color: #fff;
+}
