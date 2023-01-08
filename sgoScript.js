@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.13.1
+// @version      1.13.4
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,7 +13,7 @@
 
 (function () {
     "use strict";
-
+    const VERSION = "1.13.4"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const DEFAULT_SETTINGS = {
         COLOR: {
@@ -38,14 +38,14 @@
         神話: 2.1,
         史詩: 2.0,
         完美: 1.8,
-        頂級: 1.6,
+        頂級: 1.7,
         精良: 1.5,
         高級: 1.3,
-        上等: 1.1,
+        上等: 1.2,
         普通: 1,
         次等: 0.9,
-        劣質: 0.75,
-        破爛: 0.65,
+        劣質: 0.8,
+        破爛: 0.7,
         垃圾般: 0.55,
         屎一般: 0.4,
     };
@@ -114,7 +114,7 @@
                     btn.onclick = registerHuntLogObserver;
                     btn2.onclick = registerPlayerListObserverAndCreateSearchPlayerUI;
                     currentZoneLevel = getCurrentZoneLevel();
-                    if (localStorage.hunt_tabIndex === "0") {
+                    if (!localStorage.hunt_tabIndex || localStorage.hunt_tabIndex === "0") {
                         registerHuntLogObserver();
                     }else if (localStorage.hunt_tabIndex === "1") {                        
                         registerPlayerListObserverAndCreateSearchPlayerUI();
@@ -888,7 +888,7 @@
           #open-dialog-btn {
             position: -webkit-sticky;
             position: sticky;
-            left: 100%;
+            left: 0;
             bottom: 0;
             margin-right: 1rem;
             z-index: 9998;
@@ -903,9 +903,9 @@
         const wrapper = document.createElement("div");
         wrapper.className = "wrapper";
         wrapper.style.display = "none";
-        wrapper.innerHTML = `   <div class="dialog">
+        wrapper.innerHTML = `<div class="dialog">
         <div class="header">
-            <h1>SGO介面優化插件 Ver1.3</h1>
+            <h1>SGO介面優化插件 Ver${VERSION}</h1>
             <div>
                 <button id="reset-settings-btn">RESET</button>
                 <button id="close-dialog-btn">X</button>
