@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.13.4
+// @version      1.40.0
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,7 +13,7 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.13.4"
+    const VERSION = "1.14.0"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const DEFAULT_SETTINGS = {
         COLOR: {
@@ -360,11 +360,17 @@
                         leftDiv.style.display = "flex";
                         rightDiv.style.alignSelf = "flex-start";
                         leftDiv.appendChild(node.childNodes[0]);
-                        leftDiv.appendChild(node.childNodes[0]);
-                        rightDiv.appendChild(informationDiv);
-
+                        if(isMobileDevice()){
+                            informationDiv.style.marginLeft = "";
+                            informationDiv.insertBefore(node.childNodes[0].childNodes[0], informationDiv.childNodes[0]);
+                            node.childNodes[0].remove();
+                            leftDiv.appendChild(informationDiv);
+                        }else{
+                            leftDiv.appendChild(node.childNodes[0]);
+                            rightDiv.appendChild(informationDiv);
+                        }
                         node.appendChild(leftDiv);
-                        node.appendChild(rightDiv);
+                        if(!isMobileDevice()) node.appendChild(rightDiv);
                     }
                 });
             }
@@ -1083,46 +1089,15 @@
         }
         return SETTINGS[key]
     }
-    //--------------------------------
-    function localDataSet(key, value) {
-        let data;
-        if (localStorage[STORAGE_NAME]) {
-            data = JSON.parse(localStorage[STORAGE_NAME]);
-        } else {
-            data = {
-                recipe: {},
-                COLORS: {
-                    WARNING: "#FC8181", //紅色警告
-                    TIPS: "#9AE6B4", //一般提示
-                    TRUE_STATS: "#FEEBC8", //裝備原始素質顏色
-                    ZONE_LEVEL: "#FF95CA" //樓層切換的顏色
-                },
-                WARNING: {
-                    EQUIPMENT: 20, //裝備低於多少耐久
-                    HP: 0.6, //血量單次耗損幾成
-                },
-                DISABLE_BAD_BUTTON: false //將 false 改成 true，即可禁用"搶劫"與"我要超渡你"按鍵
-            };
-        }
 
-        // data[key] = JSON.stringify(value);
-        data[key] = value;
-        localStorage[STORAGE_NAME] = JSON.stringify(data);
-    }
-    function localDataGet(key) {
-        if (localStorage[STORAGE_NAME]) {
-            const data = JSON.parse(localStorage[STORAGE_NAME]);
-            if(data[key]){
-                if(typeof data[key] === "string"){
-                    return JSON.parse(data[key])
-                }
-                return data[key]
+    function isMobileDevice() {
+        const mobileDevices = ['Android', 'webOS', 'iPhone', 'iPad', 'iPod', 'BlackBerry', 'Windows Phone']
+        for (let i = 0; i < mobileDevices.length; i++) {
+            if (navigator.userAgent.match(mobileDevices[i])) {
+                return true;
             }
-            return {}; //data[key] ? JSON.parse(data[key]) : {};
-        } else {
-            // localStorage[STORAGE_NAME] = JSON.stringify({key:{}});
-            return {};
         }
+        return false
     }
     /**
      * @returns {{name: string, isNumeric: boolean}[]}

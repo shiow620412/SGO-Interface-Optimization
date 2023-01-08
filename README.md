@@ -3,6 +3,11 @@
 ## [GitHub](https://github.com/shiow620412/SGO-Interface-Optimization)  
 ## 有任何問題或建議 歡迎找我提出 DC:Wind#2131
 
+* Ver 1.14.0
+  
+  * 針對手機端用戶優化狩獵戰報，省略了戰鬥過程文字  
+  ![示意圖](https://cdn.discordapp.com/attachments/586112717954220049/1061711095460540496/image.png)
+
 * Ver 1.13.4
   
   * 修改裝備品質倍率
