@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.15.0
+// @version      1.16.0
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,7 +13,7 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.15.0"
+    const VERSION = "1.16.0"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const DEFAULT_SETTINGS = {
         COLOR: {
@@ -166,43 +166,50 @@
 
                 if(document.querySelector("#searchPlayerName")) return;
                 const playerListContainer = document.querySelector("[tabindex='0'] > .chakra-container > .css-0")
-                // console.log(playerListContainer);
-                const div = document.createElement("div");                
-                div.style.display = "flex";
-                div.style.alignItems = "center";
-                div.style.marginBottom = "1rem"
-                div.innerHTML = `<label style="width: 84px;">搜尋玩家</label>`
-                const input = document.createElement("input");
-                input.type = "text";
-                input.id = "searchPlayerName"
-                input.autocomplete = "off"
-                input.style.cssText = `
-                    width: var(--chakra-sizes-full);
-                    min-width: 0px;
-                    outline: transparent solid 2px;
-                    outline-offset: 2px;
-                    position: relative;
-                    appearance: none;
-                    transition-property: var(--chakra-transition-property-common);
-                    transition-duration: var(--chakra-transition-duration-normal);
-                    font-size: var(--chakra-fontSizes-md);
-                    padding-inline-start: var(--chakra-space-4);
-                    padding-inline-end: var(--chakra-space-4);
-                    height: var(--chakra-sizes-10);
-                    border-radius: var(--chakra-radii-md);
-                    border-width: 2px;
-                    border-style: solid;
-                    border-image: initial;
-                    border-color: var(--chakra-colors-transparent);
-                    background: var(--chakra-colors-whiteAlpha-100);
-                `
+                // // console.log(playerListContainer);
+                // const div = document.createElement("div");                
+                // div.style.display = "flex";
+                // div.style.alignItems = "center";
+                // div.style.marginBottom = "1rem"
+                // div.innerHTML = `<label style="width: 84px;">搜尋玩家</label>`
+                // const input = document.createElement("input");
+                // input.type = "text";
+                // input.id = "searchPlayerName"
+                // input.autocomplete = "off"
+                // input.style.cssText = `
+                //     width: var(--chakra-sizes-full);
+                //     min-width: 0px;
+                //     outline: transparent solid 2px;
+                //     outline-offset: 2px;
+                //     position: relative;
+                //     appearance: none;
+                //     transition-property: var(--chakra-transition-property-common);
+                //     transition-duration: var(--chakra-transition-duration-normal);
+                //     font-size: var(--chakra-fontSizes-md);
+                //     padding-inline-start: var(--chakra-space-4);
+                //     padding-inline-end: var(--chakra-space-4);
+                //     height: var(--chakra-sizes-10);
+                //     border-radius: var(--chakra-radii-md);
+                //     border-width: 2px;
+                //     border-style: solid;
+                //     border-image: initial;
+                //     border-color: var(--chakra-colors-transparent);
+                //     background: var(--chakra-colors-whiteAlpha-100);
+                // `
+                // input.onchange = () => {
+                //     const name = input.value;
+                //     document.querySelectorAll("[tabindex='0'] > .chakra-container > .css-0 > div > div").forEach(row => {
+                //        checkPlayerName(row, name);
+                //     });
+                // };
+                // div.appendChild(input);
+                const [div, input] = createSearchUI("搜尋玩家", "searchPlayerName");
                 input.onchange = () => {
                     const name = input.value;
                     document.querySelectorAll("[tabindex='0'] > .chakra-container > .css-0 > div > div").forEach(row => {
                        checkPlayerName(row, name);
                     });
                 };
-                div.appendChild(input);
                 playerListContainer.querySelector("p").after(div);
             }
 
@@ -436,6 +443,23 @@
                         }
                     });;
                     observer.observe(targetContainer, {subtree: false, childList:true })
+                    if(document.querySelector("#searchPlayerName") || location.pathname !== "/market") return;
+                    const [div, input] = createSearchUI("搜尋販賣者", "searchPlayerName");
+                    // targetContainer.before(targetContainer.firstChild, div);
+                    ["equipments", "mines", "items"].forEach(category => {
+                        subscribeApi(`trades?category=${category}`, (data) => {
+                            data.trades = data.trades.filter(trade => trade.sellerName.match(input.value))
+                        });
+                    });
+                    div.querySelector("label").style.width = "96px";
+                    div.style.maxWidth = "800px";
+                    div.style.marginLeft = "auto";
+                    div.style.marginRight = "auto";
+                    div.style.width ="95%"
+                    document.querySelector("[role=tablist]").before(div);
+                    // targetContainer.querySelectorAll(".chakra-tabs__tab-panels > div > .chakra-container").forEach(tabDiv => {
+                    //     document.querySelector(".chakra-tabs").appendChild.appendChild(div);
+                    // })
                     // observer.observe(targetContainer, {
                     //     subtree: true,
                     //     childList: true,
@@ -842,6 +866,42 @@
         })
     }
 
+
+    // 搜尋UI
+    function createSearchUI(labelText, inputId) {
+        const div = document.createElement("div");                
+        div.style.display = "flex";
+        div.style.alignItems = "center";
+        div.style.marginBottom = "1rem"
+        div.innerHTML = `<label style="width: 84px;">${labelText}</label>`
+        const input = document.createElement("input");
+        input.type = "text";
+        input.id = inputId
+        input.autocomplete = "off"
+        input.style.cssText = `
+            width: var(--chakra-sizes-full);
+            min-width: 0px;
+            outline: transparent solid 2px;
+            outline-offset: 2px;
+            position: relative;
+            appearance: none;
+            transition-property: var(--chakra-transition-property-common);
+            transition-duration: var(--chakra-transition-duration-normal);
+            font-size: var(--chakra-fontSizes-md);
+            padding-inline-start: var(--chakra-space-4);
+            padding-inline-end: var(--chakra-space-4);
+            height: var(--chakra-sizes-10);
+            border-radius: var(--chakra-radii-md);
+            border-width: 2px;
+            border-style: solid;
+            border-image: initial;
+            border-color: var(--chakra-colors-transparent);
+            background: var(--chakra-colors-whiteAlpha-100);
+        `
+        // input.onchange = inputEvent
+        div.appendChild(input);
+        return [div, input];
+    }
     //系統設定UI
     function createSettingUI(){
         const style = document.createElement("style");
