@@ -3,6 +3,11 @@
 ## [GitHub](https://github.com/shiow620412/SGO-Interface-Optimization)  
 ## 有任何問題或建議 歡迎找我提出 DC:Wind#2131
 
+* Ver 1.17.0
+  
+  * 新增體力過低紅字警告，預設過低值為 100，可至設定頁面調整
+  * 新增功能 顯示狩獵結果扣了多少HP與體力(僅支援單人顯示)
+  
 * Ver 1.16.0
   
   * 新增市場搜尋販賣者功能

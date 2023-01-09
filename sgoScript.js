@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.16.0
+// @version      1.17.0
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,7 +13,7 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.16.0"
+    const VERSION = "1.17.0"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const DEFAULT_SETTINGS = {
         COLOR: {
@@ -25,6 +25,7 @@
         WARNING: {
             EQUIPMENT: 20, //裝備低於多少耐久
             HP: 60, //血量單次耗損幾成
+            SP: 100 //體力低於多少
         },
         GENERAL: {
             DISABLE_BAD_BUTTON: false, //將 false 改成 true，即可禁用"搶劫"與"我要超渡你"按鍵
@@ -129,10 +130,14 @@
                     
                     subscribeApi("hunt", (data) => {
                         const nickname = data.profile.nickname
+                        const metaData = data.meta.teamA.find(player => player.name === nickname);
                         const index = data.messages.findIndex(msg => msg.m.match(`${nickname}還有 [0-9]+ 點HP`));
                         if(!!~index){
+                            if(metaData.hp - data.profile.hp !== 0){
+                                data.messages[index].m += `(-${metaData.hp - data.profile.hp})`
+                            }
                             data.messages.splice(index+1, 0, {
-                                m: `${nickname}還有 ${data.profile.sp} 點體力`,
+                                m: `${nickname}還有 ${data.profile.sp} 點體力(-${metaData.sp - data.profile.sp })`,
                                 s: "subInfo"
                             })
                         }
@@ -166,43 +171,6 @@
 
                 if(document.querySelector("#searchPlayerName")) return;
                 const playerListContainer = document.querySelector("[tabindex='0'] > .chakra-container > .css-0")
-                // // console.log(playerListContainer);
-                // const div = document.createElement("div");                
-                // div.style.display = "flex";
-                // div.style.alignItems = "center";
-                // div.style.marginBottom = "1rem"
-                // div.innerHTML = `<label style="width: 84px;">搜尋玩家</label>`
-                // const input = document.createElement("input");
-                // input.type = "text";
-                // input.id = "searchPlayerName"
-                // input.autocomplete = "off"
-                // input.style.cssText = `
-                //     width: var(--chakra-sizes-full);
-                //     min-width: 0px;
-                //     outline: transparent solid 2px;
-                //     outline-offset: 2px;
-                //     position: relative;
-                //     appearance: none;
-                //     transition-property: var(--chakra-transition-property-common);
-                //     transition-duration: var(--chakra-transition-duration-normal);
-                //     font-size: var(--chakra-fontSizes-md);
-                //     padding-inline-start: var(--chakra-space-4);
-                //     padding-inline-end: var(--chakra-space-4);
-                //     height: var(--chakra-sizes-10);
-                //     border-radius: var(--chakra-radii-md);
-                //     border-width: 2px;
-                //     border-style: solid;
-                //     border-image: initial;
-                //     border-color: var(--chakra-colors-transparent);
-                //     background: var(--chakra-colors-whiteAlpha-100);
-                // `
-                // input.onchange = () => {
-                //     const name = input.value;
-                //     document.querySelectorAll("[tabindex='0'] > .chakra-container > .css-0 > div > div").forEach(row => {
-                //        checkPlayerName(row, name);
-                //     });
-                // };
-                // div.appendChild(input);
                 const [div, input] = createSearchUI("搜尋玩家", "searchPlayerName");
                 input.onchange = () => {
                     const name = input.value;
@@ -319,8 +287,19 @@
                                     if (hpRegexMatch.length > 0) {
                                         const currentHp = Number(hpRegexMatch[0]);
                                         const costHp = profile.hp - currentHp;
-                                        if (costHp / profile.hp >= getSettingByKey("WARNING").HP / 100) {
-                                            line.style.color = getSettingByKey("COLOR").WARNING;
+                                        if (costHp / profile.hp >= getSettingByKey("WARNING.HP") / 100) {
+                                            line.style.color = getSettingByKey("COLOR.WARNING");
+                                        }
+                                    }
+
+                                    const spRegexMatch = regexGetValue(
+                                        `${profile.name}還有 ([0-9]+) 點體力`,
+                                        line.innerText
+                                    );
+                                    if(spRegexMatch.length){
+                                        const currentSp = Number(spRegexMatch[0]);
+                                        if(currentSp < getSettingByKey("WARNING.SP")){
+                                            line.style.color = getSettingByKey("COLOR.WARNING");
                                         }
                                     }
                                 });
@@ -346,7 +325,7 @@
                                         }
                                     }
                                 });
-
+                                
                                 informationDiv.appendChild(line);
                             }
                         });
@@ -359,16 +338,16 @@
                                 equipmentMsgDiv.className = equipment.msgClassname;
                                 equipmentMsgDiv.innerText = `${equipment.name}還有 ${calcDurablilty} 點耐久`;
                                 equipmentMsgDiv.style.color =
-                                    calcDurablilty <= getSettingByKey("WARNING").EQUIPMENT
-                                        ? getSettingByKey("COLOR").WARNING
-                                        : getSettingByKey("COLOR").TIPS;
+                                    calcDurablilty <= getSettingByKey("WARNING.EQUIPMENT")
+                                        ? getSettingByKey("COLOR.WARNING")
+                                        : getSettingByKey("COLOR.TIPS")
                                 informationDiv.appendChild(equipmentMsgDiv);
                             }
                         });
                         if(currentZoneLevel && getCurrentZoneLevel() > currentZoneLevel){
                             const zoneLevelChangeDiv = document.createElement("div");
                             zoneLevelChangeDiv.style.display = "flex";
-                            zoneLevelChangeDiv.style.color = getSettingByKey("COLOR").ZONE_LEVEL;
+                            zoneLevelChangeDiv.style.color = getSettingByKey("COLOR.ZONE_LEVEL");
                             zoneLevelChangeDiv.innerText = `爬到了${document.querySelector("[zones]").textContent.split("：")[1]}`
                             informationDiv.appendChild(zoneLevelChangeDiv);
                         }
@@ -411,7 +390,7 @@
                     //搜尋玩家
                     checkPlayerName(row, document.querySelector("#searchPlayerName").value);
                     //禁用壞按鍵
-                    if(getSettingByKey("GENERAL").DISABLE_BAD_BUTTON){
+                    if(getSettingByKey("GENERAL.DISABLE_BAD_BUTTON")){
                         const menuButtons = row.querySelectorAll("[role='menu'] > button");
                         menuButtons.forEach(button => {
                             if(["搶劫", "我要超渡你"].includes(button.textContent)){                            
@@ -574,7 +553,7 @@
                 trueStats.push((dur / ratio).toFixed(2));
 
                 const colorSpan = document.createElement("span");
-                colorSpan.style.color = getSettingByKey("COLOR").TRUE_STATS;
+                colorSpan.style.color = getSettingByKey("COLOR.TRUE_STATS");
                 const newStatHTML = statDom.innerHTML
                     .split("<br>")
                     .map((s, index) => {
@@ -909,7 +888,7 @@
         const wrapper = document.createElement("div");
         wrapper.className = "wrapper";
         wrapper.style.display = "none";
-        wrapper.innerHTML = `<div class="dialog">
+        wrapper.innerHTML = ` <div class="dialog">
         <div class="header">
             <h1>SGO介面優化插件 Ver${VERSION}</h1>
             <div>
@@ -980,11 +959,15 @@
                         <label for="hp">血量單次耗損(百分比)</label>
                         <input type="text" id="hp">
                     </div>
+                    <div class="row">
+                        <label for="sp">體力低於(數值)</label>
+                        <input type="text" id="sp">
+                    </div>
                 </div>
             </div>
           
         </div>
-        </div>`
+    </div>`
         const openDialogBtn = document.createElement("button");
         openDialogBtn.id = "open-dialog-btn"
         openDialogBtn.innerHTML = `
@@ -1022,15 +1005,18 @@
             WARNING: {
                 EQUIPMENT: document.querySelector("#equipment"),
                 HP: document.querySelector("#hp"),
+                SP: document.querySelector("#sp")
             }
         }
 
-        settingElement.GENERAL.DISABLE_BAD_BUTTON.checked = getSettingByKey("GENERAL").DISABLE_BAD_BUTTON
+        
+
         const colorSetting = getSettingByKey("COLOR");
         Object.entries(settingElement["COLOR"]).forEach(entry => {
             const element = entry[1];
 
-            element.value = colorSetting[entry[0]];
+            // element.value = colorSetting[entry[0]] ? colorSetting[entry[0]] : getObjectValueByRecursiveKey(structuredClone(DEFAULT_SETTINGS), `COLOR.${entry[0]}`);
+            element.value = colorSetting[entry[0]]; //? colorSetting[entry[0]] : getObjectValueByRecursiveKey(structuredClone(DEFAULT_SETTINGS), `COLOR.${entry[0]}`);
             element.nextElementSibling.style.color = element.value;
             element.onchange = () => {
                 if(!/^#[0-9a-fA-F]{6}$/.test(element.value)){
@@ -1044,17 +1030,19 @@
         const warningSetting = getSettingByKey("WARNING");
         Object.entries(settingElement["WARNING"]).forEach(entry => {
             const element = entry[1];
-            element.value = warningSetting[entry[0]];
+            element.value = warningSetting[entry[0]]; //? warningSetting[entry[0]] : getObjectValueByRecursiveKey(structuredClone(DEFAULT_SETTINGS), `WARNING.${entry[0]}`);;
 
             element.onchange = () => {
-                if(Number.isNaN(Number(element.value))){
-                   return 
+                if(element.value === "" || Number.isNaN(Number(element.value))){
+                    element.value = warningSetting[entry[0]]
+                    return 
                 }
-                colorSetting[entry[0]] = Number(element.value);
+                warningSetting[entry[0]] = Number(element.value);
                 saveSettings();
             };
         });
 
+        settingElement.GENERAL.DISABLE_BAD_BUTTON.checked = getSettingByKey("GENERAL.DISABLE_BAD_BUTTON")
         settingElement.GENERAL.DISABLE_BAD_BUTTON.onchange = () => {
             getSettingByKey("GENERAL").DISABLE_BAD_BUTTON = settingElement.GENERAL.DISABLE_BAD_BUTTON.checked;
             saveSettings();
@@ -1076,9 +1064,29 @@
         localStorage[STORAGE_NAME] = JSON.stringify(SETTINGS);
     }
 
+    function getObjectValueByRecursiveKey(obj, recursiveKey) {
+        const keys = recursiveKey.split(".");
+        let tempObj = obj;
+        keys.forEach(key => {
+            if(!tempObj[key]) {
+                tempObj = null;
+                return
+            }
+            tempObj = tempObj[key]
+        });
+        return tempObj
+    }
     function getSettingByKey(key) {
-        if(!SETTINGS[key]) {
-            SETTINGS[key] = structuredClone(DEFAULT_SETTINGS)[key]
+        //檢查是否有新的設定或缺少設定
+        if(key.split(".").length === 1){
+            Object.keys(DEFAULT_SETTINGS[key]).forEach(k => {
+                if(SETTINGS[key][k]) return;
+                SETTINGS[key][k] = DEFAULT_SETTINGS[key][k];
+                saveSettings();
+            });
+        }
+        if(!getObjectValueByRecursiveKey(SETTINGS, key)) {
+            SETTINGS[key] = getObjectValueByRecursiveKey(structuredClone(DEFAULT_SETTINGS), key)
             saveSettings();
         }else if(key === "recipe" && typeof SETTINGS[key] === 'string'){
             try{
@@ -1088,7 +1096,7 @@
             }
             saveSettings();
         }
-        return SETTINGS[key]
+        return getObjectValueByRecursiveKey(SETTINGS, key)
     }
 
     function isMobileDevice() {
