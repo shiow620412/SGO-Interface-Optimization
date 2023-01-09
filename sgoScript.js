@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.17.0
+// @version      1.17.1
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,7 +13,7 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.17.0"
+    const VERSION = "1.17.1"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const DEFAULT_SETTINGS = {
         COLOR: {
@@ -134,12 +134,19 @@
                         const index = data.messages.findIndex(msg => msg.m.match(`${nickname}還有 [0-9]+ 點HP`));
                         if(!!~index){
                             if(metaData.hp - data.profile.hp !== 0){
-                                data.messages[index].m += `(-${metaData.hp - data.profile.hp})`
+                                if(metaData.hp - data.profile.hp > 0){
+                                    data.messages[index].m += `(-${metaData.hp - data.profile.hp})`
+                                }else{
+                                    data.messages[index].m += `(+${data.profile.hp - metaData.hp})`                                    
+                                }                                
                             }
-                            data.messages.splice(index+1, 0, {
-                                m: `${nickname}還有 ${data.profile.sp} 點體力(-${metaData.sp - data.profile.sp })`,
-                                s: "subInfo"
-                            })
+                            const msg = {m: "", s: "subInfo"}
+                            if( metaData.sp - data.profile.sp > 0){
+                                msg.m = `${nickname}還有 ${data.profile.sp} 點體力(-${metaData.sp - data.profile.sp })`
+                            }else{
+                                msg.m = `${nickname}還有 ${data.profile.sp} 點體力(+${data.profile.sp - metaData.sp})`
+                            }
+                            data.messages.splice(index+1, 0, msg)                            
                         }
                     });
 
