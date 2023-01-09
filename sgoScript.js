@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.40.0
+// @version      1.15.0
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,7 +13,7 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.14.0"
+    const VERSION = "1.15.0"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const DEFAULT_SETTINGS = {
         COLOR: {
@@ -53,6 +53,7 @@
     
     const observers = [];
     const timers = [];
+    const subscribeEvents = {};
     const pageScript = {
         "/profile": () => {
             bindEvent("/profile", () => {
@@ -103,16 +104,22 @@
         "/hunt": () => {
             let currentZoneLevel;
             bindEvent("/hunt", () => {
-                const btn = document.querySelector(
-                    "button.chakra-tabs__tab[data-index='0']"
-                );
-                const btn2 = document.querySelector(
-                    "button.chakra-tabs__tab[data-index='1']"
-                );
-                if (btn && btn2) {
+                // const buttons = [
+                //     document.querySelector("button.chakra-tabs__tab[data-index='0']"),
+                //     document.querySelector("button.chakra-tabs__tab[data-index='1']"),
+                //     document.querySelectorAll("[tabindex='0'] > .chakra-container > div > button")?.[0],
+                //     document.querySelectorAll("[tabindex='0'] > .chakra-container > div > button")?.[1],
+                // ]
+                const huntTabButton = document.querySelector("button.chakra-tabs__tab[data-index='0']");
+                const playerListTabButton = document.querySelector("button.chakra-tabs__tab[data-index='1']");
+                // if (buttons.every(btn => btn)) {
+                if (huntTabButton && playerListTabButton) {
                     clearTimers();
-                    btn.onclick = registerHuntLogObserver;
-                    btn2.onclick = registerPlayerListObserverAndCreateSearchPlayerUI;
+                    huntTabButton.onclick = registerHuntLogObserver;
+                    playerListTabButton.onclick = registerPlayerListObserverAndCreateSearchPlayerUI;
+                    // buttons[0].onclick = registerHuntLogObserver;
+                    // buttons[1].onclick = registerPlayerListObserverAndCreateSearchPlayerUI;
+                    // buttons[2].onclick = buttons[3].onclick = 
                     currentZoneLevel = getCurrentZoneLevel();
                     if (!localStorage.hunt_tabIndex || localStorage.hunt_tabIndex === "0") {
                         registerHuntLogObserver();
@@ -120,6 +127,30 @@
                         registerPlayerListObserverAndCreateSearchPlayerUI();
                     }
                     
+                    subscribeApi("hunt", (data) => {
+                        const nickname = data.profile.nickname
+                        const index = data.messages.findIndex(msg => msg.m.match(`${nickname}還有 [0-9]+ 點HP`));
+                        if(!!~index){
+                            data.messages.splice(index+1, 0, {
+                                m: `${nickname}還有 ${data.profile.sp} 點體力`,
+                                s: "subInfo"
+                            })
+                        }
+                    });
+
+                    // subscribeApi("profile", (data) => {
+                    //     if(currentZoneLevel && data.huntStage > currentZoneLevel){
+
+                    //     }
+                    // });
+
+                    // subscribeApi("team", (data) => {
+                    //     if(!data.members) return;
+                    //     const apiTime = new Date().getTime();
+                    //     const firstHuntReport = JSON.parse(localStorage.huntReports)[0];
+                    //     if(apiTime - firstHuntReport > 10) return;
+
+                    // });
                 }
             });
             function getCurrentZoneLevel(){
@@ -132,26 +163,7 @@
             }
 
             function createSearchPlayerUI(){
-                // const moveActionContainer = document.querySelector(".chakra-container > div");
-                // const badButtonControl = moveActionContainer.querySelector("div").cloneNode(true);
-                // const switchLabel = badButtonControl.childNodes[0];
-                // badButtonControl.style.top = "2rem";
-                // badButtonControl.childNodes[1].textContent = "開啟壞壞行動"
-                // badButtonControl.childNodes[1].removeAttribute("for");
-                // badButtonControl.onclick = (e) => {
-                //     e.preventDefault();
-                //     if(switchLabel.getAttribute("data-checked") !== null){
-                //         switchLabel.removeAttribute("data-checked");
-                //         switchLabel.querySelector("span").removeAttribute("data-checked");
-                //         switchLabel.querySelector("span > span").removeAttribute("data-checked");
-                //     }else {
-                //         switchLabel.setAttribute("data-checked", "");
-                //         switchLabel.querySelector("span").setAttribute("data-checked", "");
-                //         switchLabel.querySelector("span > span").setAttribute("data-checked", "");
-                //     }
-                // };
-                
-                // moveActionContainer.appendChild(badButtonControl);
+
                 if(document.querySelector("#searchPlayerName")) return;
                 const playerListContainer = document.querySelector("[tabindex='0'] > .chakra-container > .css-0")
                 // console.log(playerListContainer);
@@ -211,10 +223,10 @@
                 createSearchPlayerUI();
                 clearObservers();
                 const playerListContainer = document.querySelector("[tabindex='0'] > .chakra-container > .css-0")
-                const observer = new MutationObserver(disableBadButton);
+                const observer = new MutationObserver(playerListRefreshEvent);
                 observer.observe(playerListContainer, { childList: true, subtree: true });
                 observers.push(observer);
-                disableBadButton();
+                playerListRefreshEvent();
             }
 
             function beautifyHuntLog() {
@@ -376,6 +388,7 @@
             }
 
             function checkPlayerName(row, name) {
+                //檢查是否為體力低下的提示row
                 if(new RegExp("^[0-9]{2}/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$").test(row.outerText)) return;
                 const playerName = row?.childNodes[1]?.childNodes[0]?.childNodes[1]?.childNodes[0].textContent;
                 if(playerName && !!~playerName.indexOf(name)){
@@ -385,12 +398,13 @@
                 }
             }
 
-            function disableBadButton() {
+            function playerListRefreshEvent() {
                 
                 document.querySelectorAll("[tabindex='0'] > .chakra-container > .css-0 > div > div").forEach(row => {
+                    //搜尋玩家
                     checkPlayerName(row, document.querySelector("#searchPlayerName").value);
+                    //禁用壞按鍵
                     if(getSettingByKey("GENERAL").DISABLE_BAD_BUTTON){
-
                         const menuButtons = row.querySelectorAll("[role='menu'] > button");
                         menuButtons.forEach(button => {
                             if(["搶劫", "我要超渡你"].includes(button.textContent)){                            
@@ -767,145 +781,71 @@
         },
     };
     
+    const apiData = {}
+    //攔截API回傳
+    const _fetch = window.fetch;
+    window.fetch = async (url, fetchOptions) => {
+        // console.log(url);
+        const originResp = await _fetch(url, fetchOptions);
+        const ab = await originResp.arrayBuffer()
+        const jsonObject = JSON.parse(new TextDecoder("utf-8").decode(ab));
+
+        const apiUrl = regexGetValue("api/(.*)", url);
+        if(apiUrl.length){
+            if(apiUrl[0] === "hunt"){
+                apiData["profile"] = structuredClone(jsonObject.profile);                
+                triggerEventHook("profile");
+
+            }
+
+            apiData[apiUrl[0]] = structuredClone(jsonObject);
+            triggerEventHook(apiUrl[0]);
+            // console.log(apiUrl[0], apiData);            
+            return new Response(new TextEncoder().encode(JSON.stringify(apiData[apiUrl[0]])));
+
+        }else{
+
+            // console.log(apiData);
+            const uint8Array = new TextEncoder().encode(JSON.stringify(jsonObject));
+            const newResp = new Response(uint8Array);
+            return newResp;
+        }
+        
+    };
+
+    function triggerEventHook(url) {
+        if(!subscribeEvents[url]){
+            return;
+        }
+        const removes = [];
+        subscribeEvents[url].forEach(element => {
+            if(!element.forever) removes.push(element);
+            element.event(apiData[url]);
+        });
+        if(removes.length) subscribeEvents[url] = subscribeEvents[url].filter(element => !removes.includes(element));
+        
+    }
+    
+    function subscribeApi(url, event, forever = true) {
+        if(!subscribeEvents[url]){
+            subscribeEvents[url] = [];
+        }
+        subscribeEvents[url].push({
+            event,
+            forever
+        });
+    }
+
+    function clearSubscribeEvents(){
+        Object.keys(subscribeEvents).forEach(key => {
+            delete subscribeEvents[key];
+        })
+    }
+
+    //系統設定UI
     function createSettingUI(){
         const style = document.createElement("style");
-        style.innerText = `* {
-            box-sizing: border-box;
-          }
-          
-          .wrapper {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: rgba(15, 19, 26, 0.8);
-            height: 100vh;
-            position: fixed;
-            width: 100%;
-            /* height: 100%; */
-            left: 0;
-            top: 0;
-            overflow: auto;
-            z-index: 9999;
-          }
-          
-          .header {
-            display: flex;
-            justify-content: space-between;
-            margin: 1rem 1rem 0 1rem;
-          }
-          .header button {
-            height: 100%;
-          }
-          .header h1 {
-            color: #fff;
-          }
-          .header #reset-settings-btn {
-            border: 1px solid #3c3f43;
-            margin-right: 1rem;
-          }
-          
-          .content {
-            display: flex;
-            margin: 0 1rem 1rem 1rem;
-            flex-direction: column;
-          }
-          .content hr {
-            width: 100%;
-          }
-          
-          .panel {
-            position: relative;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-          }
-          .panel input[type=checkbox] {
-            margin: 0.5rem;
-          }
-          .panel input[type=text] {
-            background-color: #1a1d24;
-            background-image: none;
-            border: 1px solid #3c3f43;
-            border-radius: 6px;
-            color: #e9ebf0;
-            display: block;
-            font-size: 14px;
-            line-height: 1.42857143;
-            padding: 7px 11px;
-            transition: border-color 0.3s ease-in-out;
-            width: 100px;
-          }
-          
-          .panel + .panel::before {
-            border-top: 1px solid #3c3f43;
-            content: "";
-            left: 20px;
-            position: absolute;
-            right: 20px;
-            top: 0;
-          }
-          
-          .panel-header {
-            width: 100%;
-            padding: 20px;
-          }
-          .panel-header span {
-            color: #fff;
-            font-size: 16px;
-            line-height: 1.25;
-          }
-          
-          .panel-body {
-            padding: 0 20px 20px 20px;
-          }
-          
-          .description {
-            margin: 0px;
-            color: #a4a9b3;
-            line-height: 1.5;
-            font-size: 8px;
-          }
-          
-          .dialog {
-            width: 800px;
-            height: 500px;
-            left: 0;
-            top: 0;
-            overflow: auto;
-            z-index: 9999;
-            background-color: #292d33;
-            border-radius: 6px;
-            box-shadow: 0 4px 4px rgba(0, 0, 0, 0.12), 0 0 10px rgba(0, 0, 0, 0.06);
-          }
-          
-          .row {
-            margin-top: 1rem;
-            display: flex;
-            align-items: center;
-          }
-          .row label {
-            color: #a4a9b3;
-            margin-right: 1rem;
-          }
-          .row input {
-            margin-right: 1rem;
-          }
-          
-          #open-dialog-btn {
-            position: -webkit-sticky;
-            position: sticky;
-            left: 0;
-            bottom: 0;
-            margin-right: 1rem;
-            z-index: 9998;
-            color: #7d7d7d;
-            background-color: transparent;
-            border: none;
-          }
-          
-          #open-dialog-btn:hover {
-            color: #fff;
-          }/*# sourceMappingURL=style.css.map */`
+        style.innerText = `*{box-sizing:border-box}.wrapper{display:flex;align-items:center;justify-content:center;background-color:rgba(15,19,26,.8);height:100vh;position:fixed;width:100%;left:0;top:0;overflow:auto;z-index:9999}.header{display:flex;justify-content:space-between;margin:1rem 1rem 0 1rem}.header button{height:100%}.header h1{color:#fff}.header #reset-settings-btn{border:1px solid #3c3f43;margin-right:1rem}.content{display:flex;margin:0 1rem 1rem 1rem;flex-direction:column}.content hr{width:100%}.panel{position:relative;width:100%;display:flex;flex-direction:column}.panel input[type=checkbox]{margin:.5rem}.panel input[type=text]{background-color:#1a1d24;background-image:none;border:1px solid #3c3f43;border-radius:6px;color:#e9ebf0;display:block;font-size:14px;line-height:1.42857143;padding:7px 11px;transition:border-color .3s ease-in-out;width:100px}.panel+.panel::before{border-top:1px solid #3c3f43;content:"";left:20px;position:absolute;right:20px;top:0}.panel-header{width:100%;padding:20px}.panel-header span{color:#fff;font-size:16px;line-height:1.25}.panel-body{padding:0 20px 20px 20px}.description{margin:0px;color:#a4a9b3;line-height:1.5;font-size:8px}.dialog{width:800px;height:500px;left:0;top:0;overflow:auto;z-index:9999;background-color:#292d33;border-radius:6px;box-shadow:0 4px 4px rgba(0,0,0,.12),0 0 10px rgba(0,0,0,.06)}.row{margin-top:1rem;display:flex;align-items:center}.row label{color:#a4a9b3;margin-right:1rem}.row input{margin-right:1rem}#open-dialog-btn{position:-webkit-sticky;position:sticky;left:0;bottom:0;margin-right:1rem;z-index:9998;color:#7d7d7d;background-color:rgba(0,0,0,0);border:none}#open-dialog-btn:hover{color:#fff}/*# sourceMappingURL=style.css.map */`
         const wrapper = document.createElement("div");
         wrapper.className = "wrapper";
         wrapper.style.display = "none";
@@ -984,7 +924,7 @@
             </div>
           
         </div>
-    </div>`
+        </div>`
         const openDialogBtn = document.createElement("button");
         openDialogBtn.id = "open-dialog-btn"
         openDialogBtn.innerHTML = `
@@ -1075,6 +1015,7 @@
     function saveSettings() {
         localStorage[STORAGE_NAME] = JSON.stringify(SETTINGS);
     }
+
     function getSettingByKey(key) {
         if(!SETTINGS[key]) {
             SETTINGS[key] = structuredClone(DEFAULT_SETTINGS)[key]
@@ -1238,6 +1179,7 @@
                         //console.log(e);
                         clearObservers();
                         clearTimers();
+                        clearSubscribeEvents();
                         pageScript[pathname]();
                     }
                 }, 500);

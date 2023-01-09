@@ -3,6 +3,10 @@
 ## [GitHub](https://github.com/shiow620412/SGO-Interface-Optimization)  
 ## 有任何問題或建議 歡迎找我提出 DC:Wind#2131
 
+* Ver 1.15.0
+  
+  * 狩獵結果新增體力提示(僅支援單人顯示)
+
 * Ver 1.14.0
   
   * 針對手機端用戶優化狩獵戰報，省略了戰鬥過程文字  
