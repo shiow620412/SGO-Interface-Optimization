@@ -3,6 +3,12 @@
 ## [GitHub](https://github.com/shiow620412/SGO-Interface-Optimization)  
 ## 有任何問題或建議 歡迎找我提出 DC:Wind#2131
 
+* Ver 1.18.0
+  
+  * 修正-組隊狩獵結果的消耗HP與體力顯示至其他人身上(僅會顯示在按狩獵的人旁邊)
+  * 新增-記錄鍛造材料功能 **註:資料記錄在瀏覽器中，若清除資料或換瀏覽器等，將無法看見鍛造材料**
+    ![示意圖](https://cdn.discordapp.com/attachments/586112717954220049/1062437927168245770/image.png)
+
 * Ver 1.17.1
   
   * 修正-狩獵結果消耗HP與體力的正負顯示異常

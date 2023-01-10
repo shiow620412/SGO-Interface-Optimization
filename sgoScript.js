@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.17.1
+// @version      1.18.0
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,8 +13,9 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.17.1"
+    const VERSION = "1.18.0"
     const STORAGE_NAME = "SGO_Interface_Optimization";
+    const FORGE_STORAGE_NAME = "forgeLog";
     const DEFAULT_SETTINGS = {
         COLOR: {
             WARNING: "#FC8181", //紅色警告
@@ -32,6 +33,7 @@
         },
         recipe: {}
     }
+    const FORGE_LOG = loadForgeLog();
 
     let SETTINGS = loadSettings();
     const qualityJson = {
@@ -131,7 +133,7 @@
                     subscribeApi("hunt", (data) => {
                         const nickname = data.profile.nickname
                         const metaData = data.meta.teamA.find(player => player.name === nickname);
-                        const index = data.messages.findIndex(msg => msg.m.match(`${nickname}還有 [0-9]+ 點HP`));
+                        const index = data.messages.findIndex(msg => msg.m.match(`^${nickname}還有 [0-9]+ 點HP`));
                         if(!!~index){
                             if(metaData.hp - data.profile.hp !== 0){
                                 if(metaData.hp - data.profile.hp > 0){
@@ -516,18 +518,20 @@
                 const targetDom = containerNodes[1];
                 if (targetDom.classList.contains("addedTrueStat")) return;      
 
-                let quality = regexGetValue("(傳說|神話|史詩|完美|頂級|精良|高級|上等|普通|次等|劣質|破爛|垃圾般|屎一般)的", targetDom.querySelector("h2").innerText);
-                if (quality.length === 0)
-                    return console.error("quality error");
+                let equipmentNameMatch = regexGetValue("(傳說|神話|史詩|完美|頂級|精良|高級|上等|普通|次等|劣質|破爛|垃圾般|屎一般)的 (.*)", targetDom.querySelector("h2").innerText);
+                if (equipmentNameMatch.length < 2) return console.error("quality error");
 
-                const ratio = qualityJson[quality[0]];
+                const equipmentName = equipmentNameMatch[1];
+                const ratio = qualityJson[equipmentNameMatch[0]];
                 if (!ratio) return console.error("ratio error");
                 
                 //市集的裝備顯示有較多資訊 故childNodes在7
-                let statDom ;
+                let statDom, forgeDataDom ;
                 if(targetDom.childNodes.length >= 8){
+                    forgeDataDom = targetDom.querySelector("hr + div");
                     statDom = targetDom.childNodes[7].childNodes[0];
                 }else{
+                    forgeDataDom = targetDom.childNodes[2];
                     statDom = targetDom.querySelector("hr + div").childNodes[0];
                 }
                 const [atk, def, luck, kg, dur] = statDom.innerHTML
@@ -568,10 +572,21 @@
                         return `${s} ${colorSpan.outerHTML}`;                
                     })
                     .join("<br>");
+
+                const forger = forgeDataDom.childNodes[0].textContent.replace("鍛造者：","")
+                const forgeTime = new Date(`${new Date().getFullYear()} ${forgeDataDom.childNodes[1].textContent.replace("鍛造時間：", "")}`)
+                forgeTime.setSeconds(0);
+                forgeTime.setMilliseconds(0);
+                const base64 =  btoa(encodeURIComponent(`${forgeTime.getTime()},${equipmentName},${forger}`))
+                let forgeMaterial = "";
+                if(FORGE_LOG[base64]) {
+                    forgeMaterial = `鍛造材料:${FORGE_LOG[base64]}\n`;
+                }
+
                 targetDom.classList.add("addedTrueStat");
                 statDom.innerHTML = newStatHTML;
                 const div = document.createElement("div");
-                div.innerText = "括號內原始素質僅供參考，有研究出更好的算法可以聯絡插件作者";
+                div.innerText = `${forgeMaterial}括號內原始素質僅供參考，有研究出更好的算法可以聯絡插件作者`;
                 targetDom.appendChild(targetDom.querySelector("hr").cloneNode());
                 targetDom.appendChild(div);
 
@@ -582,6 +597,8 @@
         },
         "/forge": () => {
             let recipeData = getSettingByKey("recipe");
+            let selectedMaterials = []
+            let equipmentName = "";
             const elementClassname = {};
             let materialDiv, forgeContainer;
             const filterRecipe = {};
@@ -595,13 +612,23 @@
                     }
                     // if(!materialDiv)
                     materialDiv = forgeContainer.childNodes[2];
-
-                    if (materialDiv.querySelector(".chakra-table__container")) {
+                    const forgeButton = forgeContainer.querySelector("button");
+                    if (materialDiv.querySelector(".chakra-table__container") && forgeButton) {
                         clearTimers();
 
                         createUI();
                         refreshRecipeTable();
                         forgeContainer.querySelector("#addRecipeBtn").onclick = addRecipe;
+                        forgeButton.onclick = forgeClick;
+
+                        subscribeApi("forge", (data) => {
+                            const time = new Date(data.profile.actionStart);
+                            time.setSeconds(0);
+                            time.setMilliseconds(0);
+                            const base64 = btoa(encodeURIComponent(`${time.getTime()},${equipmentName},${data.profile.nickname}`))
+                            FORGE_LOG[base64] = selectedMaterials.join(",")
+                            saveForgeLog()
+                        });
                     }
                 }
             });
@@ -787,6 +814,15 @@
                 SETTINGS["recipe"] = recipeData;
                 saveSettings();
                 row.remove();
+            }
+
+            function forgeClick(){
+                selectedMaterials.length = 0
+                forgeContainer.querySelectorAll("p + div > div").forEach(div => {
+                    selectedMaterials.push(div.textContent.replace(" × ","x"));
+                });
+                equipmentName = forgeContainer.querySelector("input").value
+
             }
         },
     };
@@ -1057,7 +1093,20 @@
 
     }
 
-   
+    function loadForgeLog(){
+        if (localStorage[FORGE_STORAGE_NAME]) {
+            try{
+                return JSON.parse(localStorage[FORGE_STORAGE_NAME]);
+            }catch(e){}
+        }        
+        return {};
+    }
+
+    function saveForgeLog(){
+        localStorage[FORGE_STORAGE_NAME] = JSON.stringify(FORGE_LOG);
+    }
+
+
     function loadSettings() {
         if (localStorage[STORAGE_NAME]) {
             try{

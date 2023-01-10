@@ -2,3 +2,5 @@ sgoScript Ver*.js
 style.css
 style.css.map
 *.json
+/apiData
+/release
