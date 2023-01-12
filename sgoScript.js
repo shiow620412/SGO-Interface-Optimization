@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.18.0
+// @version      1.19.2
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,7 +13,7 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.18.0"
+    const VERSION = "1.19.2"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const FORGE_STORAGE_NAME = "forgeLog";
     const DEFAULT_SETTINGS = {
@@ -30,6 +30,7 @@
         },
         GENERAL: {
             DISABLE_BAD_BUTTON: false, //將 false 改成 true，即可禁用"搶劫"與"我要超渡你"按鍵
+            MOVE_REST_BUTTON: false
         },
         recipe: {}
     }
@@ -118,14 +119,14 @@
                 // if (buttons.every(btn => btn)) {
                 if (huntTabButton && playerListTabButton) {
                     clearTimers();
-                    huntTabButton.onclick = registerHuntLogObserver;
+                    huntTabButton.onclick = registerHuntLogOberserverAndMoveRestButtons;
                     playerListTabButton.onclick = registerPlayerListObserverAndCreateSearchPlayerUI;
-                    // buttons[0].onclick = registerHuntLogObserver;
+                    // buttons[0].onclick = registerHuntLogOberserverAndMoveRestButtons;
                     // buttons[1].onclick = registerPlayerListObserverAndCreateSearchPlayerUI;
                     // buttons[2].onclick = buttons[3].onclick = 
                     currentZoneLevel = getCurrentZoneLevel();
                     if (!localStorage.hunt_tabIndex || localStorage.hunt_tabIndex === "0") {
-                        registerHuntLogObserver();
+                        registerHuntLogOberserverAndMoveRestButtons();                       
                     }else if (localStorage.hunt_tabIndex === "1") {                        
                         registerPlayerListObserverAndCreateSearchPlayerUI();
                     }
@@ -190,12 +191,12 @@
                 playerListContainer.querySelector("p").after(div);
             }
 
-            function registerHuntLogObserver() {
+            function registerHuntLogOberserverAndMoveRestButtons() {
                 // console.log("Register");
+                if(getSettingByKey("GENERAL.MOVE_REST_BUTTON")) moveHuntButtons();
+
                 clearObservers();
-                const huntLogContainer = document.querySelector(
-                    "[tabindex='0'] > .chakra-container " // > .css-0"
-                ).lastChild
+                const huntLogContainer = document.querySelector("[tabindex='0'] > .chakra-container").lastChild
                 const observer = new MutationObserver(beautifyHuntLog);
                 observer.observe(huntLogContainer, { childList: true });
                 observers.push(observer);
@@ -211,6 +212,14 @@
                 observer.observe(playerListContainer, { childList: true, subtree: true });
                 observers.push(observer);
                 playerListRefreshEvent();
+            }
+
+            function moveHuntButtons(){
+                document.querySelectorAll("[tabindex='0'] > .chakra-container > div > button").forEach(button => {
+                    if(button.textContent === "休息") button.style.marginLeft = "auto";
+                    if(button.textContent === "清空記錄") button.style.marginLeft = "var(--chakra-space-2)";
+                });
+                
             }
 
             function beautifyHuntLog() {
@@ -423,43 +432,46 @@
                 if (location.pathname === "/market" && tables.length < 3) {
                     return;
                 }
+                clearTimers();
+
                 // if (location.pathname === "/items") {
                     // targetContainer = document.querySelector(".chakra-tabs");
-                    const observer = new MutationObserver((e) => {
-                        if(e.length === 2 && e[1].addedNodes.length && e[1].addedNodes[0].innerHTML !== ''){    
-                            onItemsDetail(e[1].addedNodes[0].childNodes[0].childNodes);
-                        }
-                    });;
-                    observer.observe(targetContainer, {subtree: false, childList:true })
-                    if(document.querySelector("#searchPlayerName") || location.pathname !== "/market") return;
-                    const [div, input] = createSearchUI("搜尋販賣者", "searchPlayerName");
-                    // targetContainer.before(targetContainer.firstChild, div);
-                    ["equipments", "mines", "items"].forEach(category => {
-                        subscribeApi(`trades?category=${category}`, (data) => {
-                            data.trades = data.trades.filter(trade => trade.sellerName.match(input.value))
-                        });
+                const observer = new MutationObserver((e) => {
+                    if(e.length === 2 && e[1].addedNodes.length && e[1].addedNodes[0].innerHTML !== ''){    
+                        onItemsDetail(e[1].addedNodes[0].childNodes[0].childNodes);
+                    }
+                });;
+                observer.observe(targetContainer, {subtree: false, childList:true })
+                observers.push(observer);
+                if(document.querySelector("#searchPlayerName") || location.pathname !== "/market") return;
+                const [div, input] = createSearchUI("搜尋販賣者", "searchPlayerName");
+                // targetContainer.before(targetContainer.firstChild, div);
+                ["equipments", "mines", "items"].forEach(category => {
+                    subscribeApi(`trades?category=${category}`, (data) => {
+                        data.trades = data.trades.filter(trade => trade.sellerName.match(input.value))
                     });
-                    div.querySelector("label").style.width = "96px";
-                    div.style.maxWidth = "800px";
-                    div.style.marginLeft = "auto";
-                    div.style.marginRight = "auto";
-                    div.style.width ="95%"
-                    document.querySelector("[role=tablist]").before(div);
-                    // targetContainer.querySelectorAll(".chakra-tabs__tab-panels > div > .chakra-container").forEach(tabDiv => {
-                    //     document.querySelector(".chakra-tabs").appendChild.appendChild(div);
-                    // })
-                    // observer.observe(targetContainer, {
-                    //     subtree: true,
-                    //     childList: true,
-                    //     characterData: true,
-                    // });
-                // }
+                });
+                div.querySelector("label").style.width = "96px";
+                div.style.maxWidth = "800px";
+                div.style.marginLeft = "auto";
+                div.style.marginRight = "auto";
+                div.style.width ="95%"
+                document.querySelector("[role=tablist]").before(div);
+                // targetContainer.querySelectorAll(".chakra-tabs__tab-panels > div > .chakra-container").forEach(tabDiv => {
+                //     document.querySelector(".chakra-tabs").appendChild.appendChild(div);
+                // })
+                // observer.observe(targetContainer, {
+                //     subtree: true,
+                //     childList: true,
+                //     characterData: true,
+                // });
+            // }
                 tables.forEach((table) => {
                     const tableId = `table${Object.keys(tablesColumns).length}`;
                     table.id = tableId;
                     tablesColumns[tableId] = getTableColumns(table, sortTable);
                 });
-                clearTimers();
+                
             });
 
             function sortTable(e) {
@@ -927,7 +939,7 @@
     //系統設定UI
     function createSettingUI(){
         const style = document.createElement("style");
-        style.innerText = `*{box-sizing:border-box}.wrapper{display:flex;align-items:center;justify-content:center;background-color:rgba(15,19,26,.8);height:100vh;position:fixed;width:100%;left:0;top:0;overflow:auto;z-index:9999}.header{display:flex;justify-content:space-between;margin:1rem 1rem 0 1rem}.header button{height:100%}.header h1{color:#fff}.header #reset-settings-btn{border:1px solid #3c3f43;margin-right:1rem}.content{display:flex;margin:0 1rem 1rem 1rem;flex-direction:column}.content hr{width:100%}.panel{position:relative;width:100%;display:flex;flex-direction:column}.panel input[type=checkbox]{margin:.5rem}.panel input[type=text]{background-color:#1a1d24;background-image:none;border:1px solid #3c3f43;border-radius:6px;color:#e9ebf0;display:block;font-size:14px;line-height:1.42857143;padding:7px 11px;transition:border-color .3s ease-in-out;width:100px}.panel+.panel::before{border-top:1px solid #3c3f43;content:"";left:20px;position:absolute;right:20px;top:0}.panel-header{width:100%;padding:20px}.panel-header span{color:#fff;font-size:16px;line-height:1.25}.panel-body{padding:0 20px 20px 20px}.description{margin:0px;color:#a4a9b3;line-height:1.5;font-size:8px}.dialog{width:800px;height:500px;left:0;top:0;overflow:auto;z-index:9999;background-color:#292d33;border-radius:6px;box-shadow:0 4px 4px rgba(0,0,0,.12),0 0 10px rgba(0,0,0,.06)}.row{margin-top:1rem;display:flex;align-items:center}.row label{color:#a4a9b3;margin-right:1rem}.row input{margin-right:1rem}#open-dialog-btn{position:-webkit-sticky;position:sticky;left:0;bottom:0;margin-right:1rem;z-index:9998;color:#7d7d7d;background-color:rgba(0,0,0,0);border:none}#open-dialog-btn:hover{color:#fff}/*# sourceMappingURL=style.css.map */`
+        style.innerText = `*{box-sizing:border-box}.wrapper{display:flex;align-items:center;justify-content:center;background-color:rgba(15,19,26,.8);height:100vh;position:fixed;width:100%;left:0;top:0;overflow:auto;z-index:9999}.header{display:flex;justify-content:space-between;margin:1rem 1rem 0 1rem}.header button{height:100%}.header h1{color:#fff}.header #reset-settings-btn{border:1px solid #3c3f43;margin-right:1rem}.content{display:flex;margin:0 1rem 1rem 1rem;flex-direction:column}.content hr{width:100%}.panel{position:relative;width:100%;display:flex;flex-direction:column}.panel input[type=checkbox]{margin:.5rem}.panel input[type=text]{background-color:#1a1d24;background-image:none;border:1px solid #3c3f43;border-radius:6px;color:#e9ebf0;display:block;font-size:14px;line-height:1.42857143;padding:7px 11px;transition:border-color .3s ease-in-out;width:100px}.panel+.panel::before{border-top:1px solid #3c3f43;content:"";left:20px;position:absolute;right:20px;top:0}.panel-header{width:100%;padding:20px}.panel-header span{color:#fff;font-size:16px;line-height:1.25}.panel-body{padding:0 20px 20px 20px}.description{margin:0px;color:#a4a9b3;line-height:1.5;font-size:8px}.dialog{width:800px;height:500px;left:0;top:0;overflow:auto;z-index:9999;background-color:#292d33;border-radius:6px;box-shadow:0 4px 4px rgba(0,0,0,.12),0 0 10px rgba(0,0,0,.06)}.row{margin-top:1rem;display:flex;align-items:center}.row label{color:#a4a9b3;margin-right:1rem}.row input{margin-right:1rem}#open-dialog-btn{position:-webkit-sticky;position:sticky;left:0;bottom:0;margin-right:1rem;z-index:9998;color:#7d7d7d;background-color:rgba(0,0,0,0);border:none}#open-dialog-btn:hover{color:#fff}`
         const wrapper = document.createElement("div");
         wrapper.className = "wrapper";
         wrapper.style.display = "none";
@@ -951,6 +963,10 @@
                     <div class="row">
                         <input type="checkbox" id="bad-button">
                         <label for="bad-button">禁用搶劫與超渡按鍵</label>
+                    </div>
+                    <div class="row">
+                        <input type="checkbox" id="rest-button">
+                        <label for="rest-button">休息按鍵靠右</label>
                     </div>
                 </div>
             </div>
@@ -1030,6 +1046,7 @@
         document.querySelector("#close-dialog-btn").onclick = () => {document.querySelector(".wrapper").style.display = "none"}
         document.querySelector("#reset-settings-btn").onclick = () => {        
             SETTINGS = structuredClone(DEFAULT_SETTINGS);
+            saveSettings();
             registerSettingUIEvent();
         };
         document.querySelector(".wrapper").onclick = (e) => {
@@ -1038,6 +1055,7 @@
         const settingElement = {
             GENERAL:{
                 DISABLE_BAD_BUTTON: document.querySelector("#bad-button"),
+                MOVE_REST_BUTTON: document.querySelector("#rest-button")
             },
             COLOR: {
                 TIPS: document.querySelector("#tips"),
@@ -1059,7 +1077,8 @@
             const element = entry[1];
 
             // element.value = colorSetting[entry[0]] ? colorSetting[entry[0]] : getObjectValueByRecursiveKey(structuredClone(DEFAULT_SETTINGS), `COLOR.${entry[0]}`);
-            element.value = colorSetting[entry[0]]; //? colorSetting[entry[0]] : getObjectValueByRecursiveKey(structuredClone(DEFAULT_SETTINGS), `COLOR.${entry[0]}`);
+            // element.value = colorSetting[entry[0]]; //? colorSetting[entry[0]] : getObjectValueByRecursiveKey(structuredClone(DEFAULT_SETTINGS), `COLOR.${entry[0]}`);
+            element.value = getSettingByKey(`COLOR.${entry[0]}`);
             element.nextElementSibling.style.color = element.value;
             element.onchange = () => {
                 if(!/^#[0-9a-fA-F]{6}$/.test(element.value)){
@@ -1073,7 +1092,8 @@
         const warningSetting = getSettingByKey("WARNING");
         Object.entries(settingElement["WARNING"]).forEach(entry => {
             const element = entry[1];
-            element.value = warningSetting[entry[0]]; //? warningSetting[entry[0]] : getObjectValueByRecursiveKey(structuredClone(DEFAULT_SETTINGS), `WARNING.${entry[0]}`);;
+            // element.value = warningSetting[entry[0]]; //? warningSetting[entry[0]] : getObjectValueByRecursiveKey(structuredClone(DEFAULT_SETTINGS), `WARNING.${entry[0]}`);;
+            element.value =  getSettingByKey(`WARNING.${entry[0]}`); //? warningSetting[entry[0]] : getObjectValueByRecursiveKey(structuredClone(DEFAULT_SETTINGS), `WARNING.${entry[0]}`);;
 
             element.onchange = () => {
                 if(element.value === "" || Number.isNaN(Number(element.value))){
@@ -1085,11 +1105,17 @@
             };
         });
 
-        settingElement.GENERAL.DISABLE_BAD_BUTTON.checked = getSettingByKey("GENERAL.DISABLE_BAD_BUTTON")
-        settingElement.GENERAL.DISABLE_BAD_BUTTON.onchange = () => {
-            getSettingByKey("GENERAL").DISABLE_BAD_BUTTON = settingElement.GENERAL.DISABLE_BAD_BUTTON.checked;
-            saveSettings();
-        };  
+        const generalSetting = getSettingByKey("GENERAL");
+        Object.entries(settingElement["GENERAL"]).forEach(entry => {
+            const element = entry[1];
+            // element.checked = generalSetting[entry[0]]; //? warningSetting[entry[0]] : getObjectValueByRecursiveKey(structuredClone(DEFAULT_SETTINGS), `WARNING.${entry[0]}`);;
+            element.checked = getSettingByKey(`GENERAL.${entry[0]}`);
+
+            element.onchange = () => {
+                generalSetting[entry[0]] = element.checked;
+                saveSettings();
+            };
+        });
 
     }
 
@@ -1123,26 +1149,46 @@
     function getObjectValueByRecursiveKey(obj, recursiveKey) {
         const keys = recursiveKey.split(".");
         let tempObj = obj;
-        keys.forEach(key => {
-            if(!tempObj[key]) {
-                tempObj = null;
-                return
+        for(let i = 0; i < keys.length; i++){
+            const key = keys[i];
+            if(tempObj[key] === undefined) {
+                // tempObj = null;
+                return  null;
             }
             tempObj = tempObj[key]
-        });
+        }
+        // keys.forEach(key => {
+           
+        // });
         return tempObj
     }
+    function setObjectValueByRecursiveKey(obj, recursiveKey, value) {
+        const keys = recursiveKey.split(".");
+        const lastKey = keys.pop();
+        let tempObj = obj;
+        keys.forEach(key => {
+            if(tempObj[key] === undefined || typeof tempObj[key] !== "object") tempObj[key] = {}
+            tempObj = tempObj[key]
+        });
+        tempObj[lastKey] = value;
+        return obj
+    }
     function getSettingByKey(key) {
-        //檢查是否有新的設定或缺少設定
+        //檢查是否有新的類別設定或缺少類別設定
         if(key.split(".").length === 1){
-            Object.keys(DEFAULT_SETTINGS[key]).forEach(k => {
-                if(SETTINGS[key][k]) return;
-                SETTINGS[key][k] = DEFAULT_SETTINGS[key][k];
+            Object.keys(DEFAULT_SETTINGS).forEach(classKey => {
+                // if(getObjectValueByRecursiveKey(SETTINGS, `${key}.${k}`) !== undefined) return;
+                // setObjectValueByRecursiveKey(SETTINGS, `${key}.${k}`, DEFAULT_SETTINGS[key][k])
+                // SETTINGS[key][k] = DEFAULT_SETTINGS[key][k];
+
+                if(SETTINGS[classKey] !== undefined) return;
+                SETTINGS[classKey] = structuredClone(DEFAULT_SETTINGS[classKey])
                 saveSettings();
             });
         }
-        if(!getObjectValueByRecursiveKey(SETTINGS, key)) {
-            SETTINGS[key] = getObjectValueByRecursiveKey(structuredClone(DEFAULT_SETTINGS), key)
+        if(getObjectValueByRecursiveKey(SETTINGS, key) === null) {
+            setObjectValueByRecursiveKey(SETTINGS, key, getObjectValueByRecursiveKey(structuredClone(DEFAULT_SETTINGS), key))
+            // SETTINGS[key] = getObjectValueByRecursiveKey(structuredClone(DEFAULT_SETTINGS), key)
             saveSettings();
         }else if(key === "recipe" && typeof SETTINGS[key] === 'string'){
             try{
