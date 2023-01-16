@@ -20,7 +20,7 @@
                 </div>
             </div>
             <div class="content">
-                <div class="panel">
+                <!-- <div class="panel" hidden>
                     <div class="panel-header">
                         <span>一般</span>
                     </div>
@@ -32,10 +32,14 @@
                             <input type="checkbox" id="bad-button">
                             <label for="bad-button">禁用搶劫與超渡按鍵</label>
                         </div>
+                        <div class="row">
+                            <input type="checkbox" id="rest-button">
+                            <label for="rest-button">休息按鍵靠右</label>
+                        </div>
                     </div>
                 </div>
 
-                <div class="panel">
+                <div class="panel" hidden>
                     <div class="panel-header">
                         <span>顏色</span>
                     </div>
@@ -66,7 +70,7 @@
                     </div>
                 </div>
                
-                <div class="panel">
+                <div class="panel" hidden>
                     <div class="panel-header">
                         <span>警示</span>
                     </div>
@@ -87,6 +91,51 @@
                             <input type="text" id="sp">
                         </div>
                     </div>
+                </div> -->
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <span>市場</span>
+                    </div>
+                    <div class="panel-body">
+                        <p class="description">
+                            刪除市場的關注名單與黑名單<BR>
+                            新增請至市場點擊訂單下方即可新增
+                        </p>
+                        <div class="row table">
+                            <label >黑名單</label>
+                            <div class="grid">
+                                <div class="grid-row-header">名字</div>
+                                <div class="grid-row">
+                                    <label for="">Wind</label>
+                                    <button>
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-x" width="19" height="19" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                            <line x1="18" y1="6" x2="6" y2="18" />
+                                            <line x1="6" y1="6" x2="18" y2="18" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row table">
+                            <label >關注名單</label>
+                            <div class="grid" id="">
+                                <div class="grid-row-header">名字</div>
+                                <div class="grid-row">
+                                    <label >無</label>
+                                    <button>
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-x" width="19" height="19" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                            <line x1="18" y1="6" x2="6" y2="18" />
+                                            <line x1="6" y1="6" x2="18" y2="18" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
               
             </div>
@@ -101,4 +150,144 @@
           </svg>
     </button>
 </body>
+<script>
+    const panel = [
+        {
+            category: "一般",
+            description: "一般功能的開啟與關閉",
+            rows:[
+                {
+                    id: "bad-button",
+                    type: "checkbox",
+                    label: "禁用搶劫與超渡按鍵"
+                },
+                {
+                    id: "rest-button",
+                    type: "checkbox",
+                    label: "休息按鍵靠右"
+                }
+            ]
+        },
+        {
+            category: "顏色",
+            description: "設定插件各種提示的顏色",
+            rows:[
+                {
+                    id: "tips",
+                    type: "colorInput",                    
+                    label: "一般提示"
+                },
+                {
+                    id: "warning",
+                    type: "colorInput",
+                    label: "紅色警告"
+                },
+                {
+                    id: "true-stats",
+                    type: "colorInput",
+                    label: "裝備原始素質"
+                },
+                {
+                    id: "zone-level",
+                    type: "colorInput",
+                    label: "到達新樓層"
+                }
+            ]
+        },
+        {
+            category: "警示",
+            description: "設定警示功能的數值",
+            rows:[
+                {
+                    id: "equipment",
+                    type: "input",                    
+                    label: "裝備耐久低於(數值)"
+                },
+                {
+                    id: "hp",
+                    type: "input",
+                    label: "血量單次耗損(百分比)"
+                },
+                {
+                    id: "sp",
+                    type: "input",
+                    label: "體力低於(數值)"
+                }
+            ]
+        },
+        {
+            category: "市場",
+            description: "刪除市場的關注名單與黑名單<BR>新增請至市場點擊訂單下方即可新增",
+            rows:[
+                {
+                    id: "watch-list",
+                    type: "table",
+                    label: "關注名單",
+                    header: "名字"
+                },
+                {
+                    id: "black-list",
+                    type: "table",
+                    label: "黑名單",
+                    header: "名字"
+                }
+            ]
+        }
+    ]
+    function createRow(rowData){
+        const type = {
+            checkbox: () => {
+                return `
+                    <input type="checkbox" id="${rowData.id}">
+                    <label for="${rowData.id}">${rowData.label}</label>
+                `                
+            },
+            input: () => {
+                return `
+                    <label for="${rowData.id}">${rowData.label}</label>
+                    <input type="text" id="${rowData.id}">
+                `   
+            },
+            colorInput: () => {
+                return `
+                    <label for="${rowData.id}">${rowData.label}</label>
+                    <input type="text" id="${rowData.id}">
+                    <p>我是顏文字</p>
+                `   
+            },
+            table: () => {
+                return `
+                    <label>${rowData.label}</label>
+                    <div class="grid" id="${rowData.id}">
+                        <div class="grid-row-header">${rowData.header}</div>
+                        <div class="grid-row">
+                            <label>空</label>
+                        </div>
+                    </div>`
+            }
+        }
+        return type[rowData.type]();
+    }
+    // const content = document.querySelector(".content");
+    // panel.forEach(panel => {
+    //     const panelDiv = document.createElement("div");
+    //     panelDiv.className = "panel";
+    //     panelDiv.innerHTML = `
+    //         <div class="panel-header">
+    //             <span>${panel.category}</span>
+    //         </div>
+    //         <div class="panel-body">
+    //             <p class="description">${panel.description}</p>
+    //         </div>
+    //     `
+    //     const panelBody = panelDiv.querySelector(".panel-body");
+    //     panel.rows.forEach(row => {
+    //         const rowDiv = document.createElement("div");
+    //         rowDiv.className = row.type === "table" ? "row table" : "row";
+    //         rowDiv.innerHTML = createRow(row);
+    //         panelBody.appendChild(rowDiv);
+    //     });
+    //     content.appendChild(panelDiv);
+    // });
+</script>
 </html>

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.19.2
+// @version      1.20.1
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,15 +13,16 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.19.2"
+    const VERSION = "1.20.1"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const FORGE_STORAGE_NAME = "forgeLog";
     const DEFAULT_SETTINGS = {
         COLOR: {
-            WARNING: "#FC8181", //紅色警告
             TIPS: "#9AE6B4", //一般提示
+            WARNING: "#FC8181", //紅色警告
             TRUE_STATS: "#FEEBC8", //裝備原始素質顏色
-            ZONE_LEVEL: "#FF95CA" //樓層切換的顏色
+            ZONE_LEVEL: "#FF95CA", //樓層切換的顏色
+            MARKET_WATCH: "#ffff00" // 關注中的訂單
         },
         WARNING: {
             EQUIPMENT: 20, //裝備低於多少耐久
@@ -30,7 +31,13 @@
         },
         GENERAL: {
             DISABLE_BAD_BUTTON: false, //將 false 改成 true，即可禁用"搶劫"與"我要超渡你"按鍵
+            DISABLE_TRUE_STATS: false,
+            DISABLE_MARKET_FUNCTION: true,
             MOVE_REST_BUTTON: false
+        },
+        MARKET: {
+            WATCH_LIST: [],
+            BLACK_LIST: []
         },
         recipe: {}
     }
@@ -54,7 +61,11 @@
         屎一般: 0.4,
     };
 
-    
+    const GLOBAL_HIGHTLIGHT_ROW = {
+        equipments: [],
+        mines: [],
+        items: []
+    }
     const observers = [];
     const timers = [];
     const subscribeEvents = {};
@@ -132,17 +143,31 @@
                     }
                     
                     subscribeApi("hunt", (data) => {
+                        data.meta.teamA.forEach(player => {
+                            const {name, hp} = player;
+                            const index = data.messages.findIndex(msg => msg.m.match(`^${name}還有 [0-9]+ 點HP`));
+                            if(!!~index){
+                                const huntHp = Number(regexGetValue(`${name}還有 ([0-9]+) 點HP`, data.messages[index].m)[0])
+                                if(hp - huntHp !== 0){
+                                    if(hp - huntHp > 0){
+                                        data.messages[index].m += `(-${hp - huntHp})`
+                                    }else{
+                                        data.messages[index].m += `(+${huntHp - hp})`                                    
+                                    }                                
+                                }                                
+                            }
+                        })
                         const nickname = data.profile.nickname
                         const metaData = data.meta.teamA.find(player => player.name === nickname);
                         const index = data.messages.findIndex(msg => msg.m.match(`^${nickname}還有 [0-9]+ 點HP`));
                         if(!!~index){
-                            if(metaData.hp - data.profile.hp !== 0){
-                                if(metaData.hp - data.profile.hp > 0){
-                                    data.messages[index].m += `(-${metaData.hp - data.profile.hp})`
-                                }else{
-                                    data.messages[index].m += `(+${data.profile.hp - metaData.hp})`                                    
-                                }                                
-                            }
+                            // if(metaData.hp - data.profile.hp !== 0){
+                            //     if(metaData.hp - data.profile.hp > 0){
+                            //         data.messages[index].m += `(-${metaData.hp - data.profile.hp})`
+                            //     }else{
+                            //         data.messages[index].m += `(+${data.profile.hp - metaData.hp})`                                    
+                            //     }                                
+                            // }
                             const msg = {m: "", s: "subInfo"}
                             if( metaData.sp - data.profile.sp > 0){
                                 msg.m = `${nickname}還有 ${data.profile.sp} 點體力(-${metaData.sp - data.profile.sp })`
@@ -424,6 +449,12 @@
         },
         "/items": () => {
             const tablesColumns = {};
+            // const needHighlightRow = {
+            //     equipments: [],
+            //     mines: [],
+            //     items: []
+            // };
+           
             bindEvent(["/items", "/market"], () => {
                 //var targetContainer = document.querySelector(".chakra-tabs").childNodes[2];
                 const tables = document.querySelectorAll("table");
@@ -432,31 +463,43 @@
                 if (location.pathname === "/market" && tables.length < 3) {
                     return;
                 }
-                clearTimers();
-
+                clearTimers();              
                 // if (location.pathname === "/items") {
                     // targetContainer = document.querySelector(".chakra-tabs");
                 const observer = new MutationObserver((e) => {
                     if(e.length === 2 && e[1].addedNodes.length && e[1].addedNodes[0].innerHTML !== ''){    
-                        onItemsDetail(e[1].addedNodes[0].childNodes[0].childNodes);
+                        if(!getSettingByKey("GENERAL.DISABLE_TRUE_STATS")) onItemsDetail(e[1].addedNodes[0].childNodes[0].childNodes);
+                        if(location.pathname === "/market" && !getSettingByKey("GENERAL.DISABLE_MARKET_FUNCTION")) createMarketButtons(e[1].addedNodes[0].childNodes[0].childNodes);
                     }
                 });;
                 observer.observe(targetContainer, {subtree: false, childList:true })
                 observers.push(observer);
+
                 if(document.querySelector("#searchPlayerName") || location.pathname !== "/market") return;
                 const [div, input] = createSearchUI("搜尋販賣者", "searchPlayerName");
                 // targetContainer.before(targetContainer.firstChild, div);
-                ["equipments", "mines", "items"].forEach(category => {
-                    subscribeApi(`trades?category=${category}`, (data) => {
-                        data.trades = data.trades.filter(trade => trade.sellerName.match(input.value))
-                    });
-                });
                 div.querySelector("label").style.width = "96px";
                 div.style.maxWidth = "800px";
                 div.style.marginLeft = "auto";
                 div.style.marginRight = "auto";
                 div.style.width ="95%"
                 document.querySelector("[role=tablist]").before(div);
+                ["equipments", "mines", "items"].forEach(category => {
+                    subscribeApi(`trades?category=${category}`, (data) => {
+                        // const blackList = getSettingByKey("MARKET.BLACK_LIST");
+                        // data.trades = data.trades.filter(trade => !blackList.includes(trade.sellerName))
+                        data.trades = data.trades.filter(trade => trade.sellerName.match(input.value))
+
+                        // const watchList = getSettingByKey("MARKET.WATCH_LIST");
+                        // GLOBAL_HIGHTLIGHT_ROW[category].length = 0;
+                        // data.trades.forEach((trade, index) => {
+                        //     if(watchList.includes(trade.sellerName)){
+                        //         GLOBAL_HIGHTLIGHT_ROW[category].push(index);
+                        //     }
+                        // });
+                    }); 
+                });
+                
                 // targetContainer.querySelectorAll(".chakra-tabs__tab-panels > div > .chakra-container").forEach(tabDiv => {
                 //     document.querySelector(".chakra-tabs").appendChild.appendChild(div);
                 // })
@@ -466,12 +509,38 @@
                 //     characterData: true,
                 // });
             // }
+                const types = ["equipments", "mines", "items"]
                 tables.forEach((table) => {
-                    const tableId = `table${Object.keys(tablesColumns).length}`;
+                    const type = types.shift();
+                    const tableId = `table${Object.keys(tablesColumns).length}-${type}`;
                     table.id = tableId;
-                    tablesColumns[tableId] = getTableColumns(table, sortTable);
+                    // tablesColumns[tableId] = getTableColumns(table, sortTable);
+
+                   
+                    const tbody = table.querySelector("tbody");
+                    function hightlightRow(){
+                        const rows = tbody.querySelectorAll("[role=row]");
+                        rows.forEach(row => { row.style.border = ""; });
+                        GLOBAL_HIGHTLIGHT_ROW[type].forEach(rowIndex => {
+                            if(rows.length > 0){
+                                // console.log(tbody.childNodes, rowIndex, tbody.childNodes[rowIndex])
+                                try{
+                                    rows[rowIndex].style.border = `1.5px solid ${getSettingByKey("COLOR.MARKET_WATCH")}`;
+                                }catch(e) {
+                                    console.error(rowIndex, rows );
+                                }
+                            }
+                        });
+                    }
+                    const observer = new MutationObserver(hightlightRow);
+                    // tbody.firstChild.remove();
+                    observer.observe(tbody, {subtree: false, childList:true })
+                    observers.push(observer);
+                    tbody.appendChild(document.createElement("tr"));
+                    // hightlightRow();
                 });
                 
+                // document.querySelector(".chakra-container > div > button")?.click()
             });
 
             function sortTable(e) {
@@ -507,7 +576,7 @@
                     e.target.classList.add("sort");
                 } else {
                     const data = {};
-                    tbodyDOM.querySelectorAll("tr").forEach((rowDOM) => {
+                    tbodyDOM.querySelectorAll("tr[role=row]").forEach((rowDOM) => {
                         const index = tableColumns.indexOf(targetColumn);
                         const key = rowDOM.childNodes[index].innerText;
                         if (data[key]) {
@@ -602,6 +671,61 @@
                 targetDom.appendChild(targetDom.querySelector("hr").cloneNode());
                 targetDom.appendChild(div);
 
+            }
+            function createMarketButtons(containerNodes) {
+                let seller = "";
+                //道具or礦物
+                if(containerNodes[1].tagName === "H2"){
+                    //販賣者：XXXX
+                    if(!containerNodes[4].textContent.startsWith("販賣者：")) return;
+                    
+                    seller = containerNodes[4].textContent.substring(4)
+                }else { //裝備類
+                    seller = containerNodes[1].childNodes[2].textContent.substring(4)
+                }
+                
+                const buttonContainer = containerNodes[containerNodes.length - 1];
+                const buyButton = buttonContainer.querySelector("button");
+
+                if(buyButton === null || 
+                    getSettingByKey("MARKET.WATCH_LIST").includes(seller) || 
+                    getSettingByKey("MARKET.BLACK_LIST").includes(seller)
+                ) 
+                    return;
+
+                const watchButton = buyButton.cloneNode();
+                const blacklistButton = buyButton.cloneNode();
+
+                watchButton.style.marginRight = "0.5rem";
+                watchButton.innerText = "關注賣家"
+                if(watchButton.getAttribute("disabled") === "") watchButton.removeAttribute("disabled") 
+                watchButton.onclick = () => {
+                    let list = getSettingByKey("MARKET.WATCH_LIST");
+                    watchButton.remove();
+                    blacklistButton.remove();
+                    if(!list.includes(seller)){
+                        list.push(seller);
+                        setObjectValueByRecursiveKey(SETTINGS, "MARKET.WATCH_LIST", list);
+                        saveSettings();
+                    }
+                };
+                
+                blacklistButton.innerText = "黑名單賣家"
+                blacklistButton.style.backgroundColor = getSettingByKey("COLOR.WARNING");
+                blacklistButton.style.marginRight = "0.5rem";
+                if(blacklistButton.getAttribute("disabled") === "") blacklistButton.removeAttribute("disabled") 
+                blacklistButton.onclick = () => {
+                    watchButton.remove();
+                    blacklistButton.remove();
+                    let list = getSettingByKey("MARKET.BLACK_LIST");
+                    if(!list.includes(seller)){
+                        list.push(seller);
+                        setObjectValueByRecursiveKey(SETTINGS, "MARKET.BLACK_LIST", list);
+                        saveSettings();
+                    }
+                };
+                buyButton.before(watchButton);
+                watchButton.before(blacklistButton);
             }
         },
         "/market"() {
@@ -854,6 +978,31 @@
                 apiData["profile"] = structuredClone(jsonObject.profile);                
                 triggerEventHook("profile");
 
+            }else if(apiUrl[0].match("trades\\?category=[a-z]+")){ //特例常駐subscribe
+                apiData[apiUrl[0]] = structuredClone(jsonObject);
+                triggerEventHook(apiUrl[0]);
+
+                const category = regexGetValue("trades\\?category=([a-z]+)", apiUrl[0])[0];
+                GLOBAL_HIGHTLIGHT_ROW[category].length = 0;
+                if(!getSettingByKey("GENERAL.DISABLE_MARKET_FUNCTION")){
+
+                    const blackList = getSettingByKey("MARKET.BLACK_LIST");
+                    apiData[apiUrl[0]].trades = apiData[apiUrl[0]].trades.filter(trade => !blackList.includes(trade.sellerName))
+    
+                    const watchList = getSettingByKey("MARKET.WATCH_LIST");
+                   
+                    for(let i = 0; i < apiData[apiUrl[0]].trades.length; i++){
+                        const trade = apiData[apiUrl[0]].trades[i];
+                        if(watchList.includes(trade.sellerName)){
+                            GLOBAL_HIGHTLIGHT_ROW[category].push(i);
+                        }
+                    }
+                }
+                return new Response(new TextEncoder().encode(JSON.stringify(apiData[apiUrl[0]])));
+                // apiData[apiUrl[0]].trades.forEach((trade, index) => {
+                // });
+              
+              
             }
 
             apiData[apiUrl[0]] = structuredClone(jsonObject);
@@ -936,13 +1085,30 @@
         div.appendChild(input);
         return [div, input];
     }
+    //開啟系統設定UI
+    function createOpenDialogButton(){
+        //開啟設定的按鍵
+        const openDialogBtn = document.createElement("button");
+        openDialogBtn.id = "open-dialog-btn"
+        openDialogBtn.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-settings" width="50" height="50" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+            <path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z" />
+            <circle cx="12" cy="12" r="3" />
+            </svg>
+        `
+        const style = document.createElement("style");
+        style.innerText = `*{box-sizing:border-box}.wrapper{display:flex;align-items:center;justify-content:center;background-color:rgba(15,19,26,.8);height:100vh;position:fixed;width:100%;left:0;top:0;overflow:auto;z-index:9999}.header{display:flex;justify-content:space-between;margin:1rem 1rem 0 1rem}.header button{height:100%}.header h1{color:#fff}.header #reset-settings-btn{border:1px solid #3c3f43;margin-right:1rem}.content{display:flex;margin:0 1rem 1rem 1rem;flex-direction:column}.content hr{width:100%}.panel{position:relative;width:100%;display:flex;flex-direction:column}.panel input[type=checkbox]{margin:.5rem}.panel input[type=text]{background-color:#1a1d24;background-image:none;border:1px solid #3c3f43;border-radius:6px;color:#e9ebf0;display:block;font-size:14px;line-height:1.42857143;padding:7px 11px;transition:border-color .3s ease-in-out;width:100px}.panel+.panel::before{border-top:1px solid #3c3f43;content:"";left:20px;position:absolute;right:20px;top:0}.panel-header{width:100%;padding:20px}.panel-header span{color:#fff;font-size:16px;line-height:1.25}.panel-body{padding:0 20px 20px 20px}.panel-body .row{margin-top:1rem;display:flex;align-items:center}.panel-body .row label{color:#a4a9b3;margin-right:1rem}.panel-body .row input{margin-right:1rem}.panel-body .row.table{flex-direction:column;align-items:flex-start}.grid{margin-top:10px;width:100%;color:#a4a9b3;background-color:#1a1d24}.grid div{border-bottom:1px solid #292d33;width:100%;height:40px;padding:10px}.grid .grid-row{display:flex;align-items:center}.grid .grid-row:hover{background-color:#3c3f43}.grid .grid-row button{font-size:14px;border:none;background-color:rgba(0,0,0,0);color:#9146ff;margin-left:auto}.grid .grid-row button:hover{cursor:pointer}.description{margin:0px;color:#a4a9b3;line-height:1.5;font-size:8px}.dialog{width:800px;height:500px;left:0;top:0;overflow:auto;z-index:9999;background-color:#292d33;border-radius:6px;box-shadow:0 4px 4px rgba(0,0,0,.12),0 0 10px rgba(0,0,0,.06)}#open-dialog-btn{position:-webkit-sticky;position:sticky;left:0;bottom:0;margin-right:1rem;z-index:9998;color:#7d7d7d;background-color:rgba(0,0,0,0);border:none}#open-dialog-btn:hover{color:#fff}[hidden]{display:none}`
+        // document.querySelector("#open-dialog-btn").onclick = () => {createSettingUI(); registerSettingUIEvent();}
+        openDialogBtn.onclick = () => {createSettingUI(); registerSettingUIEvent();}
+        document.body.appendChild(style);
+        document.body.appendChild(openDialogBtn);
+    }
     //系統設定UI
     function createSettingUI(){
-        const style = document.createElement("style");
-        style.innerText = `*{box-sizing:border-box}.wrapper{display:flex;align-items:center;justify-content:center;background-color:rgba(15,19,26,.8);height:100vh;position:fixed;width:100%;left:0;top:0;overflow:auto;z-index:9999}.header{display:flex;justify-content:space-between;margin:1rem 1rem 0 1rem}.header button{height:100%}.header h1{color:#fff}.header #reset-settings-btn{border:1px solid #3c3f43;margin-right:1rem}.content{display:flex;margin:0 1rem 1rem 1rem;flex-direction:column}.content hr{width:100%}.panel{position:relative;width:100%;display:flex;flex-direction:column}.panel input[type=checkbox]{margin:.5rem}.panel input[type=text]{background-color:#1a1d24;background-image:none;border:1px solid #3c3f43;border-radius:6px;color:#e9ebf0;display:block;font-size:14px;line-height:1.42857143;padding:7px 11px;transition:border-color .3s ease-in-out;width:100px}.panel+.panel::before{border-top:1px solid #3c3f43;content:"";left:20px;position:absolute;right:20px;top:0}.panel-header{width:100%;padding:20px}.panel-header span{color:#fff;font-size:16px;line-height:1.25}.panel-body{padding:0 20px 20px 20px}.description{margin:0px;color:#a4a9b3;line-height:1.5;font-size:8px}.dialog{width:800px;height:500px;left:0;top:0;overflow:auto;z-index:9999;background-color:#292d33;border-radius:6px;box-shadow:0 4px 4px rgba(0,0,0,.12),0 0 10px rgba(0,0,0,.06)}.row{margin-top:1rem;display:flex;align-items:center}.row label{color:#a4a9b3;margin-right:1rem}.row input{margin-right:1rem}#open-dialog-btn{position:-webkit-sticky;position:sticky;left:0;bottom:0;margin-right:1rem;z-index:9998;color:#7d7d7d;background-color:rgba(0,0,0,0);border:none}#open-dialog-btn:hover{color:#fff}`
         const wrapper = document.createElement("div");
         wrapper.className = "wrapper";
-        wrapper.style.display = "none";
+        wrapper.style.display = "";
         wrapper.innerHTML = ` <div class="dialog">
         <div class="header">
             <h1>SGO介面優化插件 Ver${VERSION}</h1>
@@ -952,170 +1118,279 @@
             </div>
         </div>
         <div class="content">
-            <div class="panel">
-                <div class="panel-header">
-                    <span>一般</span>
-                </div>
-                <div class="panel-body">
-                    <p class="description">
-                        一般功能的開啟與關閉
-                    </p>
-                    <div class="row">
-                        <input type="checkbox" id="bad-button">
-                        <label for="bad-button">禁用搶劫與超渡按鍵</label>
-                    </div>
-                    <div class="row">
-                        <input type="checkbox" id="rest-button">
-                        <label for="rest-button">休息按鍵靠右</label>
-                    </div>
-                </div>
-            </div>
-
-            <div class="panel">
-                <div class="panel-header">
-                    <span>顏色</span>
-                </div>
-                <div class="panel-body">
-                    <p class="description">
-                        設定插件各種提示的顏色
-                    </p>
-                    <div class="row">
-                        <label for="tips">一般提示</label>
-                        <input type="text" id="tips">
-                        <p>我是顏文字</p>
-                    </div>
-                    <div class="row">
-                        <label for="warning">紅色警告</label>
-                        <input type="text" id="warning">
-                        <p>我是顏文字</p>
-                    </div>
-                    <div class="row">
-                        <label for="true-stats">裝備原始素質</label>
-                        <input type="text" id="true-stats">
-                        <p>我是顏文字</p>
-                    </div>
-                    <div class="row">
-                        <label for="zone-level">到達新樓層</label>
-                        <input type="text" id="zone-level">
-                        <p>我是顏文字</p>
-                    </div>
-                </div>
-            </div>
-           
-            <div class="panel">
-                <div class="panel-header">
-                    <span>警示</span>
-                </div>
-                <div class="panel-body">
-                    <p class="description">
-                        設定警示功能的數值
-                    </p>
-                    <div class="row">
-                        <label for="equipment">裝備耐久低於(數值)</label>
-                        <input type="text" id="equipment">
-                    </div>
-                    <div class="row">
-                        <label for="hp">血量單次耗損(百分比)</label>
-                        <input type="text" id="hp">
-                    </div>
-                    <div class="row">
-                        <label for="sp">體力低於(數值)</label>
-                        <input type="text" id="sp">
-                    </div>
-                </div>
-            </div>
-          
         </div>
-    </div>`
-        const openDialogBtn = document.createElement("button");
-        openDialogBtn.id = "open-dialog-btn"
-        openDialogBtn.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-settings" width="50" height="50" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-            <path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z" />
-            <circle cx="12" cy="12" r="3" />
-          </svg>
-        `
-        document.body.appendChild(style);
+        </div>`
+        const rowEvent = {
+            checkbox: (e) => {
+                const element = e.target;
+                setObjectValueByRecursiveKey(SETTINGS, element.getAttribute("bind-setting"), element.checked);
+                saveSettings();
+            },
+            colorInput: (e) => {
+                const element = e.target;
+                const bindSetting = element.getAttribute("bind-setting");
+                if(!/^#[0-9a-fA-F]{6}$/.test(element.value)){
+                    element.value = getSettingByKey(bindSetting);
+                }
+                setObjectValueByRecursiveKey(SETTINGS, bindSetting, element.value);
+                element.nextElementSibling.style.color = element.value
+                saveSettings();
+            },
+            input: (e) => {
+                const element = e.target;
+                const bindSetting = element.getAttribute("bind-setting");
+                if(element.value === "" || Number.isNaN(Number(element.value))){
+                    element.value = getSettingByKey(bindSetting);
+                    return;
+                }
+                setObjectValueByRecursiveKey(SETTINGS, bindSetting, Number(element.value))
+                saveSettings();
+            }
+        }
+        const panel = [
+            {
+                category: "一般",
+                description: "一般功能的開啟與關閉",
+                rows:[
+                    {
+                        id: "bad-button",
+                        type: "checkbox",
+                        label: "禁用搶劫與超渡按鍵",
+                        bindSetting: "GENERAL.DISABLE_BAD_BUTTON"
+                    },
+                    {
+                        id: "rest-button",
+                        type: "checkbox",
+                        label: "休息按鍵靠右",
+                        bindSetting: "GENERAL.MOVE_REST_BUTTON"
+                    },
+                    {
+                        id: "disable-true-stats",
+                        type: "checkbox",
+                        label: "關閉原始素質顯示",
+                        bindSetting: "GENERAL.DISABLE_TRUE_STATS"
+                    },
+                    {
+                        id: "disable-market-function",
+                        type: "checkbox",
+                        label: "關閉市場黑名單與關注名單功能",
+                        bindSetting: "GENERAL.DISABLE_MARKET_FUNCTION"
+                    }
+                ]
+            },
+            {
+                category: "顏色",
+                description: "設定插件各種提示的顏色",
+                rows:[
+                    {
+                        id: "tips",
+                        type: "colorInput",                    
+                        label: "一般提示",
+                        bindSetting: "COLOR.TIPS"                    
+                    },
+                    {
+                        id: "warning",
+                        type: "colorInput",
+                        label: "紅色警告",
+                        bindSetting: "COLOR.WARNING"
+                    },
+                    {
+                        id: "true-stats",
+                        type: "colorInput",
+                        label: "裝備原始素質",
+                        bindSetting: "COLOR.TRUE_STATS"
+                    },
+                    {
+                        id: "zone-level",
+                        type: "colorInput",
+                        label: "到達新樓層",
+                        bindSetting: "COLOR.ZONE_LEVEL"
+                    },
+                    {
+                        id: "market-watch",
+                        type: "colorInput",
+                        label: "關注中的賣家外框顏色",
+                        bindSetting: "COLOR.MARKET_WATCH"
+                    }
+                ]
+            },
+            {
+                category: "警示",
+                description: "設定警示功能的數值",
+                rows:[
+                    {
+                        id: "equipment",
+                        type: "input",                    
+                        label: "裝備耐久低於(數值)",
+                        bindSetting: "WARNING.EQUIPMENT"
+                    },
+                    {
+                        id: "hp",
+                        type: "input",
+                        label: "血量單次耗損(百分比)",
+                        bindSetting: "WARNING.HP"
+                    },
+                    {
+                        id: "sp",
+                        type: "input",
+                        label: "體力低於(數值)",
+                        bindSetting: "WARNING.SP"
+                    }
+                ]
+            },
+            {
+                category: "市場",
+                description: "刪除市場的關注名單與黑名單<BR>新增請至市場點擊訂單下方即可新增",
+                rows:[
+                    {
+                        id: "watch-list",
+                        type: "table",
+                        label: "關注名單",
+                        header: "名字",
+                        bindSetting: "MARKET.WATCH_LIST"
+                    },
+                    {
+                        id: "black-list",
+                        type: "table",
+                        label: "黑名單",
+                        header: "名字",
+                        bindSetting: "MARKET.BLACK_LIST"
+                    }
+                ]
+            }
+        ]
+        function createRow(rowDiv, rowData){
+            const type = {
+                checkbox: () => {
+                    rowDiv.innerHTML =  `
+                        <input type="checkbox" id="${rowData.id}" bind-setting="${rowData.bindSetting}">
+                        <label for="${rowData.id}">${rowData.label}</label>
+                    `
+                    const mainElement = rowDiv.querySelector(`#${rowData.id}`);
+                    mainElement.checked = getSettingByKey(rowData.bindSetting);
+                    mainElement.onchange = rowEvent[rowData.type]
+                },
+                input: () => {
+                    rowDiv.innerHTML =  `
+                        <label for="${rowData.id}">${rowData.label}</label>
+                        <input type="text" id="${rowData.id}" bind-setting="${rowData.bindSetting}">
+                    `
+                    const mainElement = rowDiv.querySelector(`#${rowData.id}`);
+                    mainElement.value = getSettingByKey(rowData.bindSetting); 
+                    mainElement.onchange = rowEvent[rowData.type]  
+                },
+                colorInput: () => {
+                    rowDiv.innerHTML =  `
+                        <label for="${rowData.id}">${rowData.label}</label>
+                        <input type="text" id="${rowData.id}" bind-setting="${rowData.bindSetting}">
+                        <p>我是顏文字</p>
+                    `
+                    const mainElement = rowDiv.querySelector(`#${rowData.id}`);
+                    mainElement.value = getSettingByKey(rowData.bindSetting);
+                    rowDiv.querySelector("p").style.color = getSettingByKey(rowData.bindSetting);  
+                    mainElement.onchange = rowEvent[rowData.type]
+                },
+                table: () => {
+                    const tableData = getSettingByKey(rowData.bindSetting);
+                    let gridRowHTML = "";
+                    if(!tableData.length){
+                        gridRowHTML = `
+                        <div class="grid-row">
+                            <label>空</label>
+                        </div>`
+                    }else{
+                        tableData.forEach(name => {
+                            const div = document.createElement("div");
+                            div.innerHTML = `
+                                <label>${name}</label>
+                                <button>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-x" width="19" height="19" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                        <line x1="18" y1="6" x2="6" y2="18" />
+                                        <line x1="6" y1="6" x2="18" y2="18" />
+                                    </svg>
+                                </button>
+                            `
+                            div.className = "grid-row"
+
+                            const deleteButton = document.createElement("button");
+                            deleteButton.innerHTML = ` <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-x" width="19" height="19" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>`
+                            gridRowHTML += div.outerHTML;
+                        });
+                    }
+                    rowDiv.innerHTML =  `
+                        <label>${rowData.label}</label>
+                        <div class="grid" id="${rowData.id}" bind-setting="${rowData.bindSetting}">
+                            <div class="grid-row-header">${rowData.header}</div>
+                            ${gridRowHTML}
+                        </div>`
+                }
+            }
+            type[rowData.type]();
+        }
+        const content = wrapper.querySelector(".content");
+        panel.forEach(panel => {
+            const panelDiv = document.createElement("div");
+            panelDiv.className = "panel";
+            panelDiv.innerHTML = `
+                <div class="panel-header">
+                    <span>${panel.category}</span>
+                </div>
+                <div class="panel-body">
+                    <p class="description">${panel.description}</p>
+                </div>
+            `
+            const panelBody = panelDiv.querySelector(".panel-body");
+            panel.rows.forEach(row => {
+                const rowDiv = document.createElement("div");
+                rowDiv.className = row.type === "table" ? "row table" : "row";
+                createRow(rowDiv, row);
+            
+                panelBody.appendChild(rowDiv);
+            });
+            content.appendChild(panelDiv);
+        });
+
+
         document.body.appendChild(wrapper);        
-        document.body.appendChild(openDialogBtn);
     }
  
     function registerSettingUIEvent(){
-        document.querySelector("#open-dialog-btn").onclick = () => {document.querySelector(".wrapper").style.display = ""}
-        document.querySelector("#close-dialog-btn").onclick = () => {document.querySelector(".wrapper").style.display = "none"}
+        // document.querySelector("#open-dialog-btn").onclick = () => {document.querySelector(".wrapper").style.display = ""}
+        // document.querySelector("#close-dialog-btn").onclick = () => {document.querySelector(".wrapper").style.display = "none"}
+        document.querySelector("#close-dialog-btn").onclick = () => {document.querySelector(".wrapper").remove()}
+        document.querySelectorAll(".grid-row > button").forEach(btn => {
+            btn.onclick = (e) => {
+                const grid = e.currentTarget.parentElement.parentElement;
+                const name = e.currentTarget.parentElement.querySelector("label").textContent
+                const bindSetting = grid.getAttribute("bind-setting")
+                const tableList = getSettingByKey(bindSetting);
+                setObjectValueByRecursiveKey(SETTINGS, bindSetting, tableList.filter(row => row !== name));
+                saveSettings();
+                
+                e.currentTarget.parentElement.remove();
+                if(grid.querySelectorAll(`.grid-row`).length === 0) {
+                    const spaceGridRow = document.createElement("div");
+                    spaceGridRow.innerHTML = "<label>空</label>"
+                    spaceGridRow.className = "grid-row";
+                    grid.appendChild(spaceGridRow);
+                }
+            }   
+        });
         document.querySelector("#reset-settings-btn").onclick = () => {        
             SETTINGS = structuredClone(DEFAULT_SETTINGS);
             saveSettings();
             registerSettingUIEvent();
         };
         document.querySelector(".wrapper").onclick = (e) => {
-            if(e.target.className === "wrapper") e.target.style.display = "none";
+            // if(e.target.className === "wrapper") e.target.style.display = "none";
+            if(e.target.className === "wrapper") e.target.remove();
         }
-        const settingElement = {
-            GENERAL:{
-                DISABLE_BAD_BUTTON: document.querySelector("#bad-button"),
-                MOVE_REST_BUTTON: document.querySelector("#rest-button")
-            },
-            COLOR: {
-                TIPS: document.querySelector("#tips"),
-                WARNING: document.querySelector("#warning"),
-                TRUE_STATS: document.querySelector("#true-stats"),
-                ZONE_LEVEL: document.querySelector("#zone-level"),
-            },
-            WARNING: {
-                EQUIPMENT: document.querySelector("#equipment"),
-                HP: document.querySelector("#hp"),
-                SP: document.querySelector("#sp")
-            }
-        }
-
-        
-
-        const colorSetting = getSettingByKey("COLOR");
-        Object.entries(settingElement["COLOR"]).forEach(entry => {
-            const element = entry[1];
-
-            // element.value = colorSetting[entry[0]] ? colorSetting[entry[0]] : getObjectValueByRecursiveKey(structuredClone(DEFAULT_SETTINGS), `COLOR.${entry[0]}`);
-            // element.value = colorSetting[entry[0]]; //? colorSetting[entry[0]] : getObjectValueByRecursiveKey(structuredClone(DEFAULT_SETTINGS), `COLOR.${entry[0]}`);
-            element.value = getSettingByKey(`COLOR.${entry[0]}`);
-            element.nextElementSibling.style.color = element.value;
-            element.onchange = () => {
-                if(!/^#[0-9a-fA-F]{6}$/.test(element.value)){
-                    element.value = colorSetting[entry[0]];
-                }
-                colorSetting[entry[0]] = element.value;
-                element.nextElementSibling.style.color = element.value
-                saveSettings();
-            };
-        });
-        const warningSetting = getSettingByKey("WARNING");
-        Object.entries(settingElement["WARNING"]).forEach(entry => {
-            const element = entry[1];
-            // element.value = warningSetting[entry[0]]; //? warningSetting[entry[0]] : getObjectValueByRecursiveKey(structuredClone(DEFAULT_SETTINGS), `WARNING.${entry[0]}`);;
-            element.value =  getSettingByKey(`WARNING.${entry[0]}`); //? warningSetting[entry[0]] : getObjectValueByRecursiveKey(structuredClone(DEFAULT_SETTINGS), `WARNING.${entry[0]}`);;
-
-            element.onchange = () => {
-                if(element.value === "" || Number.isNaN(Number(element.value))){
-                    element.value = warningSetting[entry[0]]
-                    return 
-                }
-                warningSetting[entry[0]] = Number(element.value);
-                saveSettings();
-            };
-        });
-
-        const generalSetting = getSettingByKey("GENERAL");
-        Object.entries(settingElement["GENERAL"]).forEach(entry => {
-            const element = entry[1];
-            // element.checked = generalSetting[entry[0]]; //? warningSetting[entry[0]] : getObjectValueByRecursiveKey(structuredClone(DEFAULT_SETTINGS), `WARNING.${entry[0]}`);;
-            element.checked = getSettingByKey(`GENERAL.${entry[0]}`);
-
-            element.onchange = () => {
-                generalSetting[entry[0]] = element.checked;
-                saveSettings();
-            };
-        });
+    
 
     }
 
@@ -1243,7 +1518,7 @@
         );
         if (!!~index === false) return [];
 
-        table.querySelectorAll("tbody > tr").forEach((row) => {
+        table.querySelectorAll("tbody > tr[role=row]").forEach((row) => {
             const rowData = {};
 
             //金錢逗號處理
@@ -1312,8 +1587,9 @@
         container = document.querySelector("#__next");
         if (container) {
             clearInterval(timer);
-            createSettingUI();
-            registerSettingUIEvent();
+            createOpenDialogButton();
+            // createSettingUI();
+            // registerSettingUIEvent();
             loadObserver();
         }else{
             // console.log("test")
