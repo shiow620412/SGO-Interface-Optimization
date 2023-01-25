@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.20.1
+// @version      1.20.9
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,7 +13,7 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.20.1"
+    const VERSION = "1.20.9"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const FORGE_STORAGE_NAME = "forgeLog";
     const DEFAULT_SETTINGS = {
@@ -134,14 +134,14 @@
                     playerListTabButton.onclick = registerPlayerListObserverAndCreateSearchPlayerUI;
                     // buttons[0].onclick = registerHuntLogOberserverAndMoveRestButtons;
                     // buttons[1].onclick = registerPlayerListObserverAndCreateSearchPlayerUI;
-                    // buttons[2].onclick = buttons[3].onclick = 
+                    // buttons[2].onclick = buttons[3].onclick =
                     currentZoneLevel = getCurrentZoneLevel();
                     if (!localStorage.hunt_tabIndex || localStorage.hunt_tabIndex === "0") {
-                        registerHuntLogOberserverAndMoveRestButtons();                       
-                    }else if (localStorage.hunt_tabIndex === "1") {                        
+                        registerHuntLogOberserverAndMoveRestButtons();
+                    }else if (localStorage.hunt_tabIndex === "1") {
                         registerPlayerListObserverAndCreateSearchPlayerUI();
                     }
-                    
+
                     subscribeApi("hunt", (data) => {
                         data.meta.teamA.forEach(player => {
                             const {name, hp} = player;
@@ -152,9 +152,9 @@
                                     if(hp - huntHp > 0){
                                         data.messages[index].m += `(-${hp - huntHp})`
                                     }else{
-                                        data.messages[index].m += `(+${huntHp - hp})`                                    
-                                    }                                
-                                }                                
+                                        data.messages[index].m += `(+${huntHp - hp})`
+                                    }
+                                }
                             }
                         })
                         const nickname = data.profile.nickname
@@ -165,8 +165,8 @@
                             //     if(metaData.hp - data.profile.hp > 0){
                             //         data.messages[index].m += `(-${metaData.hp - data.profile.hp})`
                             //     }else{
-                            //         data.messages[index].m += `(+${data.profile.hp - metaData.hp})`                                    
-                            //     }                                
+                            //         data.messages[index].m += `(+${data.profile.hp - metaData.hp})`
+                            //     }
                             // }
                             const msg = {m: "", s: "subInfo"}
                             if( metaData.sp - data.profile.sp > 0){
@@ -174,7 +174,7 @@
                             }else{
                                 msg.m = `${nickname}還有 ${data.profile.sp} 點體力(+${data.profile.sp - metaData.sp})`
                             }
-                            data.messages.splice(index+1, 0, msg)                            
+                            data.messages.splice(index+1, 0, msg)
                         }
                     });
 
@@ -244,7 +244,7 @@
                     if(button.textContent === "休息") button.style.marginLeft = "auto";
                     if(button.textContent === "清空記錄") button.style.marginLeft = "var(--chakra-space-2)";
                 });
-                
+
             }
 
             function beautifyHuntLog() {
@@ -368,7 +368,7 @@
                                         }
                                     }
                                 });
-                                
+
                                 informationDiv.appendChild(line);
                             }
                         });
@@ -428,7 +428,7 @@
             }
 
             function playerListRefreshEvent() {
-                
+
                 document.querySelectorAll("[tabindex='0'] > .chakra-container > .css-0 > div > div").forEach(row => {
                     //搜尋玩家
                     checkPlayerName(row, document.querySelector("#searchPlayerName").value);
@@ -436,12 +436,12 @@
                     if(getSettingByKey("GENERAL.DISABLE_BAD_BUTTON")){
                         const menuButtons = row.querySelectorAll("[role='menu'] > button");
                         menuButtons.forEach(button => {
-                            if(["搶劫", "我要超渡你"].includes(button.textContent)){                            
+                            if(["搶劫", "我要超渡你"].includes(button.textContent)){
                                 button.disabled = true;
                             }
                         });
                     }
-                    
+
 
                     // }
                 });
@@ -454,7 +454,7 @@
             //     mines: [],
             //     items: []
             // };
-           
+
             bindEvent(["/items", "/market"], () => {
                 //var targetContainer = document.querySelector(".chakra-tabs").childNodes[2];
                 const tables = document.querySelectorAll("table");
@@ -463,11 +463,11 @@
                 if (location.pathname === "/market" && tables.length < 3) {
                     return;
                 }
-                clearTimers();              
+                clearTimers();
                 // if (location.pathname === "/items") {
                     // targetContainer = document.querySelector(".chakra-tabs");
                 const observer = new MutationObserver((e) => {
-                    if(e.length === 2 && e[1].addedNodes.length && e[1].addedNodes[0].innerHTML !== ''){    
+                    if(e.length === 2 && e[1].addedNodes.length && e[1].addedNodes[0].innerHTML !== ''){
                         if(!getSettingByKey("GENERAL.DISABLE_TRUE_STATS")) onItemsDetail(e[1].addedNodes[0].childNodes[0].childNodes);
                         if(location.pathname === "/market" && !getSettingByKey("GENERAL.DISABLE_MARKET_FUNCTION")) createMarketButtons(e[1].addedNodes[0].childNodes[0].childNodes);
                     }
@@ -475,31 +475,25 @@
                 observer.observe(targetContainer, {subtree: false, childList:true })
                 observers.push(observer);
 
-                if(document.querySelector("#searchPlayerName") || location.pathname !== "/market") return;
-                const [div, input] = createSearchUI("搜尋販賣者", "searchPlayerName");
-                // targetContainer.before(targetContainer.firstChild, div);
-                div.querySelector("label").style.width = "96px";
-                div.style.maxWidth = "800px";
-                div.style.marginLeft = "auto";
-                div.style.marginRight = "auto";
-                div.style.width ="95%"
-                document.querySelector("[role=tablist]").before(div);
-                ["equipments", "mines", "items"].forEach(category => {
-                    subscribeApi(`trades?category=${category}`, (data) => {
-                        // const blackList = getSettingByKey("MARKET.BLACK_LIST");
-                        // data.trades = data.trades.filter(trade => !blackList.includes(trade.sellerName))
-                        data.trades = data.trades.filter(trade => trade.sellerName.match(input.value))
+                if(!document.querySelector("#searchPlayerName") && location.pathname === "/market") {
 
-                        // const watchList = getSettingByKey("MARKET.WATCH_LIST");
-                        // GLOBAL_HIGHTLIGHT_ROW[category].length = 0;
-                        // data.trades.forEach((trade, index) => {
-                        //     if(watchList.includes(trade.sellerName)){
-                        //         GLOBAL_HIGHTLIGHT_ROW[category].push(index);
-                        //     }
-                        // });
-                    }); 
-                });
-                
+                    const [div, input] = createSearchUI("搜尋販賣者", "searchPlayerName");
+                    // targetContainer.before(targetContainer.firstChild, div);
+                    div.querySelector("label").style.width = "96px";
+                    div.style.maxWidth = "800px";
+                    div.style.marginLeft = "auto";
+                    div.style.marginRight = "auto";
+                    div.style.width ="95%"
+                    document.querySelector("[role=tablist]").before(div);
+                    ["equipments", "mines", "items"].forEach(category => {
+                        subscribeApi(`trades?category=${category}`, (data) => {
+                            data.trades = data.trades.filter(trade => trade.sellerName.match(input.value))
+
+
+                        });
+                    });
+                };
+
                 // targetContainer.querySelectorAll(".chakra-tabs__tab-panels > div > .chakra-container").forEach(tabDiv => {
                 //     document.querySelector(".chakra-tabs").appendChild.appendChild(div);
                 // })
@@ -514,9 +508,9 @@
                     const type = types.shift();
                     const tableId = `table${Object.keys(tablesColumns).length}-${type}`;
                     table.id = tableId;
-                    // tablesColumns[tableId] = getTableColumns(table, sortTable);
+                    tablesColumns[tableId] = getTableColumns(table, sortTable);
 
-                   
+                    if( location.pathname !== "/market") return;
                     const tbody = table.querySelector("tbody");
                     function hightlightRow(){
                         const rows = tbody.querySelectorAll("[role=row]");
@@ -525,7 +519,7 @@
                             if(rows.length > 0){
                                 // console.log(tbody.childNodes, rowIndex, tbody.childNodes[rowIndex])
                                 try{
-                                    rows[rowIndex].style.border = `1.5px solid ${getSettingByKey("COLOR.MARKET_WATCH")}`;
+                                    rows[rowIndex].style.border = `solid ${getSettingByKey("COLOR.MARKET_WATCH")}`;
                                 }catch(e) {
                                     console.error(rowIndex, rows );
                                 }
@@ -539,13 +533,21 @@
                     tbody.appendChild(document.createElement("tr"));
                     // hightlightRow();
                 });
-                
+
                 // document.querySelector(".chakra-container > div > button")?.click()
             });
 
             function sortTable(e) {
                 const tableDOM = e.target.parentElement.parentElement.parentElement;
                 const sortClassDOM = tableDOM.querySelector(".sort");
+                if(["攻擊", "防禦", "耐久"].includes(e.target.innerText)  && location.pathname === "/items") {
+                    if(sortClassDOM && sortClassDOM.innerText.match("↓|↑")){
+                        sortClassDOM.innerText = sortClassDOM.innerText.slice(0, -1);
+                        sortClassDOM.classList.remove("sort");
+                    }
+                    return;
+                };
+
                 let sortingMethod = "↓";
                 if (sortClassDOM) {
                     if (sortClassDOM === e.target) {
@@ -597,7 +599,7 @@
                 if(containerNodes[1].tagName === "H2") return;
 
                 const targetDom = containerNodes[1];
-                if (targetDom.classList.contains("addedTrueStat")) return;      
+                if (targetDom.classList.contains("addedTrueStat")) return;
 
                 let equipmentNameMatch = regexGetValue("(傳說|神話|史詩|完美|頂級|精良|高級|上等|普通|次等|劣質|破爛|垃圾般|屎一般)的 (.*)", targetDom.querySelector("h2").innerText);
                 if (equipmentNameMatch.length < 2) return console.error("quality error");
@@ -605,12 +607,12 @@
                 const equipmentName = equipmentNameMatch[1];
                 const ratio = qualityJson[equipmentNameMatch[0]];
                 if (!ratio) return console.error("ratio error");
-                
+
                 //市集的裝備顯示有較多資訊 故childNodes在7
                 let statDom, forgeDataDom ;
-                if(targetDom.childNodes.length >= 8){
+                if(targetDom.childNodes.length >= 6 && location.pathname === "/market"){
                     forgeDataDom = targetDom.querySelector("hr + div");
-                    statDom = targetDom.childNodes[7].childNodes[0];
+                    statDom = targetDom.childNodes[5].childNodes[0];
                 }else{
                     forgeDataDom = targetDom.childNodes[2];
                     statDom = targetDom.querySelector("hr + div").childNodes[0];
@@ -620,8 +622,8 @@
                     .map((s, index) => {
                         //有強化的裝備
                         let value = regexGetValue("([0-9]+) \\(([+-]{1}[0-9]+)\\)", s);
-                        if(value.length === 2){                        
-                            return Number(value[0]) - Number(value[1])                             
+                        if(value.length === 2){
+                            return Number(value[0]) - Number(value[1])
                         }else {
                             //耐久數值處理
                             if(index === 4){
@@ -650,7 +652,7 @@
                     .split("<br>")
                     .map((s, index) => {
                         colorSpan.innerText = `(${trueStats[index]})`
-                        return `${s} ${colorSpan.outerHTML}`;                
+                        return `${s} ${colorSpan.outerHTML}`;
                     })
                     .join("<br>");
 
@@ -677,20 +679,22 @@
                 //道具or礦物
                 if(containerNodes[1].tagName === "H2"){
                     //販賣者：XXXX
-                    if(!containerNodes[4].textContent.startsWith("販賣者：")) return;
-                    
-                    seller = containerNodes[4].textContent.substring(4)
+                    if(!containerNodes[3]?.childNodes[1]?.childNodes[1]?.textContent.startsWith("販賣者：")) return;
+
+                    seller = containerNodes[3]?.childNodes[1]?.childNodes[1]?.textContent.substring(4)
                 }else { //裝備類
-                    seller = containerNodes[1].childNodes[2].textContent.substring(4)
+                    // seller =  containerNodes[1].childNodes[3].childNodes[0].textContent.substring(4)
+                    if(!containerNodes[1].querySelector("h2 + div")?.childNodes[1]?.childNodes[1]?.textContent.startsWith("販賣者：")) return;
+                    seller =  containerNodes[1].querySelector("h2 + div").childNodes[1].childNodes[1].textContent.substring(4)
                 }
-                
+
                 const buttonContainer = containerNodes[containerNodes.length - 1];
                 const buyButton = buttonContainer.querySelector("button");
 
-                if(buyButton === null || 
-                    getSettingByKey("MARKET.WATCH_LIST").includes(seller) || 
+                if(buyButton === null ||
+                    getSettingByKey("MARKET.WATCH_LIST").includes(seller) ||
                     getSettingByKey("MARKET.BLACK_LIST").includes(seller)
-                ) 
+                )
                     return;
 
                 const watchButton = buyButton.cloneNode();
@@ -698,7 +702,7 @@
 
                 watchButton.style.marginRight = "0.5rem";
                 watchButton.innerText = "關注賣家"
-                if(watchButton.getAttribute("disabled") === "") watchButton.removeAttribute("disabled") 
+                if(watchButton.getAttribute("disabled") === "") watchButton.removeAttribute("disabled")
                 watchButton.onclick = () => {
                     let list = getSettingByKey("MARKET.WATCH_LIST");
                     watchButton.remove();
@@ -709,11 +713,11 @@
                         saveSettings();
                     }
                 };
-                
+
                 blacklistButton.innerText = "黑名單賣家"
                 blacklistButton.style.backgroundColor = getSettingByKey("COLOR.WARNING");
                 blacklistButton.style.marginRight = "0.5rem";
-                if(blacklistButton.getAttribute("disabled") === "") blacklistButton.removeAttribute("disabled") 
+                if(blacklistButton.getAttribute("disabled") === "") blacklistButton.removeAttribute("disabled")
                 blacklistButton.onclick = () => {
                     watchButton.remove();
                     blacklistButton.remove();
@@ -932,7 +936,7 @@
                     if (!recipeData[recipeName] && materials.length > 0) {
                         recipeData[recipeName] = materials.join("、");
                         SETTINGS["recipe"] = recipeData;
-                        saveSettings();                        
+                        saveSettings();
                         refreshRecipeTable();
                         recipeNameInput.value = "";
                     } else {
@@ -962,7 +966,7 @@
             }
         },
     };
-    
+
     const apiData = {}
     //攔截API回傳
     const _fetch = window.fetch;
@@ -972,10 +976,11 @@
         const ab = await originResp.arrayBuffer()
         const jsonObject = JSON.parse(new TextDecoder("utf-8").decode(ab));
 
-        const apiUrl = regexGetValue("api/(.*)", url);
+        //特殊問題 部分電腦的url不是字串而是requestInfo 需要取其中的url property來拿到api網址
+        const apiUrl = regexGetValue("api/(.*)", typeof url === "string" ? url : url.url);
         if(apiUrl.length){
             if(apiUrl[0] === "hunt"){
-                apiData["profile"] = structuredClone(jsonObject.profile);                
+                apiData["profile"] = structuredClone(jsonObject.profile);
                 triggerEventHook("profile");
 
             }else if(apiUrl[0].match("trades\\?category=[a-z]+")){ //特例常駐subscribe
@@ -988,9 +993,9 @@
 
                     const blackList = getSettingByKey("MARKET.BLACK_LIST");
                     apiData[apiUrl[0]].trades = apiData[apiUrl[0]].trades.filter(trade => !blackList.includes(trade.sellerName))
-    
+
                     const watchList = getSettingByKey("MARKET.WATCH_LIST");
-                   
+
                     for(let i = 0; i < apiData[apiUrl[0]].trades.length; i++){
                         const trade = apiData[apiUrl[0]].trades[i];
                         if(watchList.includes(trade.sellerName)){
@@ -1001,13 +1006,13 @@
                 return new Response(new TextEncoder().encode(JSON.stringify(apiData[apiUrl[0]])));
                 // apiData[apiUrl[0]].trades.forEach((trade, index) => {
                 // });
-              
-              
+
+
             }
 
             apiData[apiUrl[0]] = structuredClone(jsonObject);
             triggerEventHook(apiUrl[0]);
-            // console.log(apiUrl[0], apiData);            
+            // console.log(apiUrl[0], apiData);
             return new Response(new TextEncoder().encode(JSON.stringify(apiData[apiUrl[0]])));
 
         }else{
@@ -1017,7 +1022,7 @@
             const newResp = new Response(uint8Array);
             return newResp;
         }
-        
+
     };
 
     function triggerEventHook(url) {
@@ -1030,9 +1035,9 @@
             element.event(apiData[url]);
         });
         if(removes.length) subscribeEvents[url] = subscribeEvents[url].filter(element => !removes.includes(element));
-        
+
     }
-    
+
     function subscribeApi(url, event, forever = true) {
         if(!subscribeEvents[url]){
             subscribeEvents[url] = [];
@@ -1052,7 +1057,7 @@
 
     // 搜尋UI
     function createSearchUI(labelText, inputId) {
-        const div = document.createElement("div");                
+        const div = document.createElement("div");
         div.style.display = "flex";
         div.style.alignItems = "center";
         div.style.marginBottom = "1rem"
@@ -1184,9 +1189,9 @@
                 rows:[
                     {
                         id: "tips",
-                        type: "colorInput",                    
+                        type: "colorInput",
                         label: "一般提示",
-                        bindSetting: "COLOR.TIPS"                    
+                        bindSetting: "COLOR.TIPS"
                     },
                     {
                         id: "warning",
@@ -1220,7 +1225,7 @@
                 rows:[
                     {
                         id: "equipment",
-                        type: "input",                    
+                        type: "input",
                         label: "裝備耐久低於(數值)",
                         bindSetting: "WARNING.EQUIPMENT"
                     },
@@ -1276,8 +1281,8 @@
                         <input type="text" id="${rowData.id}" bind-setting="${rowData.bindSetting}">
                     `
                     const mainElement = rowDiv.querySelector(`#${rowData.id}`);
-                    mainElement.value = getSettingByKey(rowData.bindSetting); 
-                    mainElement.onchange = rowEvent[rowData.type]  
+                    mainElement.value = getSettingByKey(rowData.bindSetting);
+                    mainElement.onchange = rowEvent[rowData.type]
                 },
                 colorInput: () => {
                     rowDiv.innerHTML =  `
@@ -1287,7 +1292,7 @@
                     `
                     const mainElement = rowDiv.querySelector(`#${rowData.id}`);
                     mainElement.value = getSettingByKey(rowData.bindSetting);
-                    rowDiv.querySelector("p").style.color = getSettingByKey(rowData.bindSetting);  
+                    rowDiv.querySelector("p").style.color = getSettingByKey(rowData.bindSetting);
                     mainElement.onchange = rowEvent[rowData.type]
                 },
                 table: () => {
@@ -1349,16 +1354,16 @@
                 const rowDiv = document.createElement("div");
                 rowDiv.className = row.type === "table" ? "row table" : "row";
                 createRow(rowDiv, row);
-            
+
                 panelBody.appendChild(rowDiv);
             });
             content.appendChild(panelDiv);
         });
 
 
-        document.body.appendChild(wrapper);        
+        document.body.appendChild(wrapper);
     }
- 
+
     function registerSettingUIEvent(){
         // document.querySelector("#open-dialog-btn").onclick = () => {document.querySelector(".wrapper").style.display = ""}
         // document.querySelector("#close-dialog-btn").onclick = () => {document.querySelector(".wrapper").style.display = "none"}
@@ -1371,7 +1376,7 @@
                 const tableList = getSettingByKey(bindSetting);
                 setObjectValueByRecursiveKey(SETTINGS, bindSetting, tableList.filter(row => row !== name));
                 saveSettings();
-                
+
                 e.currentTarget.parentElement.remove();
                 if(grid.querySelectorAll(`.grid-row`).length === 0) {
                     const spaceGridRow = document.createElement("div");
@@ -1379,9 +1384,9 @@
                     spaceGridRow.className = "grid-row";
                     grid.appendChild(spaceGridRow);
                 }
-            }   
+            }
         });
-        document.querySelector("#reset-settings-btn").onclick = () => {        
+        document.querySelector("#reset-settings-btn").onclick = () => {
             SETTINGS = structuredClone(DEFAULT_SETTINGS);
             saveSettings();
             registerSettingUIEvent();
@@ -1390,7 +1395,7 @@
             // if(e.target.className === "wrapper") e.target.style.display = "none";
             if(e.target.className === "wrapper") e.target.remove();
         }
-    
+
 
     }
 
@@ -1399,7 +1404,7 @@
             try{
                 return JSON.parse(localStorage[FORGE_STORAGE_NAME]);
             }catch(e){}
-        }        
+        }
         return {};
     }
 
@@ -1413,10 +1418,10 @@
             try{
                 return JSON.parse(localStorage[STORAGE_NAME]);
             }catch(e){}
-        }        
+        }
         return structuredClone(DEFAULT_SETTINGS);
     }
-    
+
     function saveSettings() {
         localStorage[STORAGE_NAME] = JSON.stringify(SETTINGS);
     }
@@ -1433,7 +1438,7 @@
             tempObj = tempObj[key]
         }
         // keys.forEach(key => {
-           
+
         // });
         return tempObj
     }
