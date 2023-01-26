@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.20.9
+// @version      1.21.0
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,7 +13,7 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.20.9"
+    const VERSION = "1.21.0"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const FORGE_STORAGE_NAME = "forgeLog";
     const DEFAULT_SETTINGS = {
@@ -1054,7 +1054,19 @@
         })
     }
 
-
+    //改變navbar
+    function wrapNavbar() {
+        const style = document.createElement("style");
+        style.innerHTML = `
+            nav {
+                flex-wrap: wrap;
+                min-width: auto !important;
+            }
+        `
+        document.body.appendChild(style);
+        // document.querySelector("nav").style.flexWrap = "wrap";
+        // document.querySelector("nav").style.minWidth = "unset";
+    }
     // 搜尋UI
     function createSearchUI(labelText, inputId) {
         const div = document.createElement("div");
@@ -1593,6 +1605,7 @@
         if (container) {
             clearInterval(timer);
             createOpenDialogButton();
+            if(isMobileDevice()) wrapNavbar()
             // createSettingUI();
             // registerSettingUIEvent();
             loadObserver();
