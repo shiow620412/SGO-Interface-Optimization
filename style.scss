@@ -168,7 +168,7 @@
 #open-dialog-btn{
     position: sticky;
     left: 0;
-    bottom: 0;
+    bottom: 20px;
     margin-right: 1rem;
     // margin-bottom: 1rem;
     z-index: 9998;
@@ -184,4 +184,27 @@
 
 [hidden] {
     display: none;
+}
+
+#exp-bar {
+    position: fixed;
+    bottom: 0px;
+    width: 100%;
+    height: 24px;
+}
+
+
+#exp-bar-fill {
+    position: fixed;
+    bottom: 0px;
+    left: 0px;
+    height: 24px;
+}
+
+.exp-container {
+    display: flex;
+    justify-content: flex-end;
+    position: fixed;
+    width: 100%;   
+    bottom: 0px;
 }

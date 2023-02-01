@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.22.1
+// @version      1.23.0
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,7 +13,7 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.22.1"
+    const VERSION = "1.23.0"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const FORGE_STORAGE_NAME = "forgeLog";
     const DEFAULT_SETTINGS = {
@@ -22,7 +22,9 @@
             WARNING: "#FC8181", //紅色警告
             TRUE_STATS: "#FEEBC8", //裝備原始素質顏色
             ZONE_LEVEL: "#FF95CA", //樓層切換的顏色
-            MARKET_WATCH: "#ffff00" // 關注中的訂單
+            MARKET_WATCH: "#ffff00", // 關注中的訂單
+            EXP_BAR_BACKGROUND: "#57595b",
+            EXP_BAR_FILL: "#aadc1e"
         },
         WARNING: {
             EQUIPMENT: 20, //裝備低於多少耐久
@@ -35,7 +37,8 @@
             DISABLE_MARKET_FUNCTION: true,
             MOVE_REST_BUTTON: false,
             MOBILE_WRAP_NAVBAR: false,
-            HUNT_STATUS_PERCENT: false
+            HUNT_STATUS_PERCENT: false,
+            SHOW_EXP_BAR: false
         },
         MARKET: {
             WATCH_LIST: [],
@@ -54,7 +57,7 @@
         頂級: 1.7,
         精良: 1.5,
         高級: 1.3,
-        上等: 1.2,
+        上等: 1.15,
         普通: 1,
         次等: 0.9,
         劣質: 0.8,
@@ -62,7 +65,6 @@
         垃圾般: 0.55,
         屎一般: 0.4,
     };
-
     const GLOBAL_HIGHTLIGHT_ROW = {
         equipments: [],
         mines: [],
@@ -71,6 +73,32 @@
     const observers = [];
     const timers = [];
     const subscribeEvents = {};
+    const specialSubscribeEvents = {
+        profile: [
+            (data) => {
+                if(location.pathname === "/hunt" && getSettingByKey("GENERAL.HUNT_STATUS_PERCENT")){
+                    data.fullHp += ` (${Math.floor(data.hp / data.fullHp * 100)}%)`
+                    data.fullSp += ` (${Math.floor(data.sp / data.fullSp * 100)}%)`
+                }
+            },
+            (data) => {
+                if(getSettingByKey("GENERAL.SHOW_EXP_BAR")){
+                    if(!document.querySelector(".exp-container")) createExpBar();
+
+                    const expBar = document.querySelector("#exp-bar");
+                    const expBarFill = document.querySelector("#exp-bar-fill");
+                    const percent = Math.floor(data.exp / data.nextExp * 1000) / 10.0;
+                    document.querySelector("#exp-bar-level-label").textContent = `LV.${data.lv}`
+                    document.querySelector("#exp-bar-exp-label").textContent = `EXP:${data.exp} / ${data.nextExp} (${percent}%)`
+                    
+                    expBar.style.backgroundColor = getSettingByKey("COLOR.EXP_BAR_BACKGROUND");
+                    expBarFill.style.backgroundColor = getSettingByKey("COLOR.EXP_BAR_FILL")
+                    expBarFill.style.width = `${percent}%`;
+
+                }
+            }
+        ]
+    }
     const pageScript = {
         "/profile": () => {
             bindEvent("/profile", () => {
@@ -1014,11 +1042,12 @@
                 // apiData[apiUrl[0]].trades.forEach((trade, index) => {
                 // });
 
-            }else if(location.pathname === "/hunt" && apiUrl[0] === "profile" && getSettingByKey("GENERAL.HUNT_STATUS_PERCENT")){
-                //狩獵頁面 顯示生命與體力的百分比
-                jsonObject.fullHp += ` (${Math.floor(jsonObject.hp / jsonObject.fullHp * 100)}%)`
-                jsonObject.fullSp += ` (${Math.floor(jsonObject.sp / jsonObject.fullSp * 100)}%)`
             }
+            // else if(location.pathname === "/hunt" && apiUrl[0] === "profile" && getSettingByKey("GENERAL.HUNT_STATUS_PERCENT")){
+            //     //狩獵頁面 顯示生命與體力的百分比
+            //     jsonObject.fullHp += ` (${Math.floor(jsonObject.hp / jsonObject.fullHp * 100)}%)`
+            //     jsonObject.fullSp += ` (${Math.floor(jsonObject.sp / jsonObject.fullSp * 100)}%)`
+            // }
 
             apiData[apiUrl[0]] = structuredClone(jsonObject);
             triggerEventHook(apiUrl[0]);
@@ -1036,15 +1065,21 @@
     };
 
     function triggerEventHook(url) {
-        if(!subscribeEvents[url]){
-            return;
+        if(specialSubscribeEvents[url]){
+            specialSubscribeEvents[url].forEach(e => {
+                e(apiData[url]);
+            });
         }
-        const removes = [];
-        subscribeEvents[url].forEach(element => {
-            if(!element.forever) removes.push(element);
-            element.event(apiData[url]);
-        });
-        if(removes.length) subscribeEvents[url] = subscribeEvents[url].filter(element => !removes.includes(element));
+
+        if(subscribeEvents[url]){
+
+            const removes = [];
+            subscribeEvents[url].forEach(element => {
+                if(!element.forever) removes.push(element);
+                element.event(apiData[url]);
+            });
+            if(removes.length) subscribeEvents[url] = subscribeEvents[url].filter(element => !removes.includes(element));
+        }
 
     }
 
@@ -1071,6 +1106,9 @@
             nav {
                 flex-wrap: wrap;
                 min-width: auto !important;
+            }
+            #__next > div > div:nth-child(2) {
+                height: 120px;
             }
         `
         document.body.appendChild(style);
@@ -1125,7 +1163,7 @@
             </svg>
         `
         const style = document.createElement("style");
-        style.innerText = `*{box-sizing:border-box}.wrapper{display:flex;align-items:center;justify-content:center;background-color:rgba(15,19,26,.8);height:100vh;position:fixed;width:100%;left:0;top:0;overflow:auto;z-index:9999}.header{display:flex;justify-content:space-between;margin:1rem 1rem 0 1rem}.header button{height:100%}.header h1{color:#fff}.header #reset-settings-btn{border:1px solid #3c3f43;margin-right:1rem}.content{display:flex;margin:0 1rem 1rem 1rem;flex-direction:column}.content hr{width:100%}.panel{position:relative;width:100%;display:flex;flex-direction:column}.panel input[type=checkbox]{margin:.5rem}.panel input[type=text]{background-color:#1a1d24;background-image:none;border:1px solid #3c3f43;border-radius:6px;color:#e9ebf0;display:block;font-size:14px;line-height:1.42857143;padding:7px 11px;transition:border-color .3s ease-in-out;width:100px}.panel+.panel::before{border-top:1px solid #3c3f43;content:"";left:20px;position:absolute;right:20px;top:0}.panel-header{width:100%;padding:20px}.panel-header span{color:#fff;font-size:16px;line-height:1.25}.panel-body{padding:0 20px 20px 20px}.panel-body .row{margin-top:1rem;display:flex;align-items:center}.panel-body .row label{color:#a4a9b3;margin-right:1rem}.panel-body .row input{margin-right:1rem}.panel-body .row.table{flex-direction:column;align-items:flex-start}.grid{margin-top:10px;width:100%;color:#a4a9b3;background-color:#1a1d24}.grid div{border-bottom:1px solid #292d33;width:100%;height:40px;padding:10px}.grid .grid-row{display:flex;align-items:center}.grid .grid-row:hover{background-color:#3c3f43}.grid .grid-row button{font-size:14px;border:none;background-color:rgba(0,0,0,0);color:#9146ff;margin-left:auto}.grid .grid-row button:hover{cursor:pointer}.description{margin:0px;color:#a4a9b3;line-height:1.5;font-size:8px}.dialog{width:800px;height:500px;left:0;top:0;overflow:auto;z-index:9999;background-color:#292d33;border-radius:6px;box-shadow:0 4px 4px rgba(0,0,0,.12),0 0 10px rgba(0,0,0,.06)}#open-dialog-btn{position:-webkit-sticky;position:sticky;left:0;bottom:0;margin-right:1rem;z-index:9998;color:#7d7d7d;background-color:rgba(0,0,0,0);border:none}#open-dialog-btn:hover{color:#fff}[hidden]{display:none}`
+        style.innerText = `*{box-sizing:border-box}.wrapper{display:flex;align-items:center;justify-content:center;background-color:rgba(15,19,26,.8);height:100vh;position:fixed;width:100%;left:0;top:0;overflow:auto;z-index:9999}.header{display:flex;justify-content:space-between;margin:1rem 1rem 0 1rem}.header button{height:100%}.header h1{color:#fff}.header #reset-settings-btn{border:1px solid #3c3f43;margin-right:1rem}.content{display:flex;margin:0 1rem 1rem 1rem;flex-direction:column}.content hr{width:100%}.panel{position:relative;width:100%;display:flex;flex-direction:column}.panel input[type=checkbox]{margin:.5rem}.panel input[type=text]{background-color:#1a1d24;background-image:none;border:1px solid #3c3f43;border-radius:6px;color:#e9ebf0;display:block;font-size:14px;line-height:1.42857143;padding:7px 11px;transition:border-color .3s ease-in-out;width:100px}.panel+.panel::before{border-top:1px solid #3c3f43;content:"";left:20px;position:absolute;right:20px;top:0}.panel-header{width:100%;padding:20px}.panel-header span{color:#fff;font-size:16px;line-height:1.25}.panel-body{padding:0 20px 20px 20px}.panel-body .row{margin-top:1rem;display:flex;align-items:center}.panel-body .row label{color:#a4a9b3;margin-right:1rem}.panel-body .row input{margin-right:1rem}.panel-body .row.table{flex-direction:column;align-items:flex-start}.grid{margin-top:10px;width:100%;color:#a4a9b3;background-color:#1a1d24}.grid div{border-bottom:1px solid #292d33;width:100%;height:40px;padding:10px}.grid .grid-row{display:flex;align-items:center}.grid .grid-row:hover{background-color:#3c3f43}.grid .grid-row button{font-size:14px;border:none;background-color:rgba(0,0,0,0);color:#9146ff;margin-left:auto}.grid .grid-row button:hover{cursor:pointer}.description{margin:0px;color:#a4a9b3;line-height:1.5;font-size:8px}.dialog{width:800px;height:500px;left:0;top:0;overflow:auto;z-index:9999;background-color:#292d33;border-radius:6px;box-shadow:0 4px 4px rgba(0,0,0,.12),0 0 10px rgba(0,0,0,.06)}#open-dialog-btn{position:-webkit-sticky;position:sticky;left:0;bottom:20px;margin-right:1rem;z-index:9998;color:#7d7d7d;background-color:rgba(0,0,0,0);border:none}#open-dialog-btn:hover{color:#fff}[hidden]{display:none}#exp-bar{position:fixed;bottom:0px;width:100%;height:24px}#exp-bar-fill{position:fixed;bottom:0px;left:0px;height:24px}.exp-container{display:flex;justify-content:flex-end;position:fixed;width:100%;bottom:0px}`
         // document.querySelector("#open-dialog-btn").onclick = () => {createSettingUI(); registerSettingUIEvent();}
         openDialogBtn.onclick = () => {createSettingUI(); registerSettingUIEvent();}
         document.body.appendChild(style);
@@ -1214,6 +1252,12 @@
                         type: "checkbox",
                         label: "顯示血量、體力百分比(僅在狩獵頁有效)",
                         bindSetting: "GENERAL.HUNT_STATUS_PERCENT"
+                    },
+                    {
+                        id: "show-exp-bar",
+                        type: "checkbox",
+                        label: "顯示經驗條",
+                        bindSetting: "GENERAL.SHOW_EXP_BAR"
                     }
                 ]
             },
@@ -1250,6 +1294,18 @@
                         type: "colorInput",
                         label: "關注中的賣家外框顏色",
                         bindSetting: "COLOR.MARKET_WATCH"
+                    },
+                    {
+                        id: "exp-bar-background",
+                        type: "colorInput",
+                        label: "經驗條背景色",
+                        bindSetting: "COLOR.EXP_BAR_BACKGROUND"
+                    },
+                    {
+                        id: "exp-bar-fill-color",
+                        type: "colorInput",
+                        label: "經驗條填充色",
+                        bindSetting: "COLOR.EXP_BAR_FILL"
                     }
                 ]
             },
@@ -1396,6 +1452,25 @@
 
 
         document.body.appendChild(wrapper);
+    }
+
+    function createExpBar() {
+        const expContainer = document.createElement("div");
+        expContainer.className = "exp-container";
+        expContainer.innerHTML = `
+        <div style="margin-right: 1rem;z-index: 1;" id="exp-bar-level-label"></div>
+        <div style="margin-right: 1rem;z-index: 1;" id="exp-bar-exp-label"></div>
+        <div id="exp-bar"></div>
+        <div id="exp-bar-fill"></div>
+        `
+        // const expBar = document.createElement("div");
+        // const expBarFill = document.createElement("div");
+
+        // expBar.id = "exp-bar"
+        // expBarFill.id = "exp-bar-fill"
+        
+        // document.body.appendChild(expBar)
+        document.body.appendChild(expContainer)
     }
 
     function registerSettingUIEvent(){
@@ -1666,6 +1741,7 @@
                         clearObservers();
                         clearTimers();
                         clearSubscribeEvents();
+
                         pageScript[pathname]();
                     }
                 }, 500);
