@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.21.0
+// @version      1.22.1
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,7 +13,7 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.21.0"
+    const VERSION = "1.22.1"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const FORGE_STORAGE_NAME = "forgeLog";
     const DEFAULT_SETTINGS = {
@@ -33,7 +33,9 @@
             DISABLE_BAD_BUTTON: false, //將 false 改成 true，即可禁用"搶劫"與"我要超渡你"按鍵
             DISABLE_TRUE_STATS: false,
             DISABLE_MARKET_FUNCTION: true,
-            MOVE_REST_BUTTON: false
+            MOVE_REST_BUTTON: false,
+            MOBILE_WRAP_NAVBAR: false,
+            HUNT_STATUS_PERCENT: false
         },
         MARKET: {
             WATCH_LIST: [],
@@ -141,8 +143,12 @@
                     }else if (localStorage.hunt_tabIndex === "1") {
                         registerPlayerListObserverAndCreateSearchPlayerUI();
                     }
-
+                    
                     subscribeApi("hunt", (data) => {
+                        if(getSettingByKey("GENERAL.HUNT_STATUS_PERCENT")){
+                            data.profile.fullHp += ` (${Math.floor(data.profile.hp / data.profile.fullHp * 100)}%)`
+                            data.profile.fullSp += ` (${Math.floor(data.profile.sp / data.profile.fullSp * 100)}%)`
+                        }
                         data.meta.teamA.forEach(player => {
                             const {name, hp} = player;
                             const index = data.messages.findIndex(msg => msg.m.match(`^${name}還有 [0-9]+ 點HP`));
@@ -979,8 +985,9 @@
         //特殊問題 部分電腦的url不是字串而是requestInfo 需要取其中的url property來拿到api網址
         const apiUrl = regexGetValue("api/(.*)", typeof url === "string" ? url : url.url);
         if(apiUrl.length){
-            if(apiUrl[0] === "hunt"){
+            if(jsonObject.profile){
                 apiData["profile"] = structuredClone(jsonObject.profile);
+            
                 triggerEventHook("profile");
 
             }else if(apiUrl[0].match("trades\\?category=[a-z]+")){ //特例常駐subscribe
@@ -1007,7 +1014,10 @@
                 // apiData[apiUrl[0]].trades.forEach((trade, index) => {
                 // });
 
-
+            }else if(location.pathname === "/hunt" && apiUrl[0] === "profile" && getSettingByKey("GENERAL.HUNT_STATUS_PERCENT")){
+                //狩獵頁面 顯示生命與體力的百分比
+                jsonObject.fullHp += ` (${Math.floor(jsonObject.hp / jsonObject.fullHp * 100)}%)`
+                jsonObject.fullSp += ` (${Math.floor(jsonObject.sp / jsonObject.fullSp * 100)}%)`
             }
 
             apiData[apiUrl[0]] = structuredClone(jsonObject);
@@ -1192,6 +1202,18 @@
                         type: "checkbox",
                         label: "關閉市場黑名單與關注名單功能",
                         bindSetting: "GENERAL.DISABLE_MARKET_FUNCTION"
+                    },
+                    {
+                        id: "mobile-wrap-navbar",
+                        type: "checkbox",
+                        label: "導覽列換行(僅供手機使用者)",
+                        bindSetting: "GENERAL.MOBILE_WRAP_NAVBAR"
+                    },
+                    {
+                        id: "hunt-status-percent",
+                        type: "checkbox",
+                        label: "顯示血量、體力百分比(僅在狩獵頁有效)",
+                        bindSetting: "GENERAL.HUNT_STATUS_PERCENT"
                     }
                 ]
             },
@@ -1605,7 +1627,7 @@
         if (container) {
             clearInterval(timer);
             createOpenDialogButton();
-            if(isMobileDevice()) wrapNavbar()
+            if(isMobileDevice() && getSettingByKey("GENERAL.MOBILE_WRAP_NAVBAR")) wrapNavbar()
             // createSettingUI();
             // registerSettingUIEvent();
             loadObserver();
