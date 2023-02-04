@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.23.0
+// @version      1.24.0
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,7 +13,7 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.23.0"
+    const VERSION = "1.24.0"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const FORGE_STORAGE_NAME = "forgeLog";
     const DEFAULT_SETTINGS = {
@@ -37,6 +37,7 @@
             DISABLE_MARKET_FUNCTION: true,
             MOVE_REST_BUTTON: false,
             MOBILE_WRAP_NAVBAR: false,
+            MOBILE_HUNT_REPORT: true,
             HUNT_STATUS_PERCENT: false,
             SHOW_EXP_BAR: false
         },
@@ -437,8 +438,12 @@
                         leftDiv.appendChild(node.childNodes[0]);
                         if(isMobileDevice()){
                             informationDiv.style.marginLeft = "";
-                            informationDiv.insertBefore(node.childNodes[0].childNodes[0], informationDiv.childNodes[0]);
-                            node.childNodes[0].remove();
+                            if(getSettingByKey("GENERAL.MOBILE_HUNT_REPORT")){
+                                informationDiv.insertBefore(node.childNodes[0].childNodes[0], informationDiv.childNodes[0]);                            
+                                node.childNodes[0].remove();
+                            }else{
+                                informationDiv.insertBefore(node.childNodes[0], informationDiv.childNodes[0]);
+                            }     
                             leftDiv.appendChild(informationDiv);
                         }else{
                             leftDiv.appendChild(node.childNodes[0]);
@@ -1242,12 +1247,6 @@
                         bindSetting: "GENERAL.DISABLE_MARKET_FUNCTION"
                     },
                     {
-                        id: "mobile-wrap-navbar",
-                        type: "checkbox",
-                        label: "導覽列換行(僅供手機使用者)",
-                        bindSetting: "GENERAL.MOBILE_WRAP_NAVBAR"
-                    },
-                    {
                         id: "hunt-status-percent",
                         type: "checkbox",
                         label: "顯示血量、體力百分比(僅在狩獵頁有效)",
@@ -1258,6 +1257,25 @@
                         type: "checkbox",
                         label: "顯示經驗條",
                         bindSetting: "GENERAL.SHOW_EXP_BAR"
+                    }
+                ]
+            },
+            {
+                category: "手機",
+                description: "手機特別功能開啟與關閉",
+                mobile: true,
+                rows:[
+                    {
+                        id: "mobile-wrap-navbar",
+                        type: "checkbox",
+                        label: "導覽列換行",
+                        bindSetting: "GENERAL.MOBILE_WRAP_NAVBAR"
+                    },
+                    {
+                        id: "mobile-hunt-report",
+                        type: "checkbox",
+                        label: "精簡狩獵結果",
+                        bindSetting: "GENERAL.MOBILE_HUNT_REPORT"
                     }
                 ]
             },
@@ -1429,6 +1447,7 @@
         }
         const content = wrapper.querySelector(".content");
         panel.forEach(panel => {
+            if(panel.mobile && !isMobileDevice()) return;
             const panelDiv = document.createElement("div");
             panelDiv.className = "panel";
             panelDiv.innerHTML = `
