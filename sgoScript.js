@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.24.0
+// @version      1.25.0
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,7 +13,7 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.24.0"
+    const VERSION = "1.25.0"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const FORGE_STORAGE_NAME = "forgeLog";
     const DEFAULT_SETTINGS = {
@@ -35,7 +35,7 @@
             DISABLE_BAD_BUTTON: false, //將 false 改成 true，即可禁用"搶劫"與"我要超渡你"按鍵
             DISABLE_TRUE_STATS: false,
             DISABLE_MARKET_FUNCTION: true,
-            MOVE_REST_BUTTON: false,
+            HIDE_REST_BUTTON: false,
             MOBILE_WRAP_NAVBAR: false,
             MOBILE_HUNT_REPORT: true,
             HUNT_STATUS_PERCENT: false,
@@ -57,7 +57,7 @@
         完美: 1.8,
         頂級: 1.7,
         精良: 1.5,
-        高級: 1.3,
+        高級: 1.35,
         上等: 1.15,
         普通: 1,
         次等: 0.9,
@@ -161,14 +161,14 @@
                 // if (buttons.every(btn => btn)) {
                 if (huntTabButton && playerListTabButton) {
                     clearTimers();
-                    huntTabButton.onclick = registerHuntLogOberserverAndMoveRestButtons;
+                    huntTabButton.onclick = registerHuntLogOberserverAndHideRestButtons;
                     playerListTabButton.onclick = registerPlayerListObserverAndCreateSearchPlayerUI;
-                    // buttons[0].onclick = registerHuntLogOberserverAndMoveRestButtons;
+                    // buttons[0].onclick = registerHuntLogOberserverAndHideRestButtons;
                     // buttons[1].onclick = registerPlayerListObserverAndCreateSearchPlayerUI;
                     // buttons[2].onclick = buttons[3].onclick =
                     currentZoneLevel = getCurrentZoneLevel();
                     if (!localStorage.hunt_tabIndex || localStorage.hunt_tabIndex === "0") {
-                        registerHuntLogOberserverAndMoveRestButtons();
+                        registerHuntLogOberserverAndHideRestButtons();
                     }else if (localStorage.hunt_tabIndex === "1") {
                         registerPlayerListObserverAndCreateSearchPlayerUI();
                     }
@@ -251,9 +251,9 @@
                 playerListContainer.querySelector("p").after(div);
             }
 
-            function registerHuntLogOberserverAndMoveRestButtons() {
+            function registerHuntLogOberserverAndHideRestButtons() {
                 // console.log("Register");
-                if(getSettingByKey("GENERAL.MOVE_REST_BUTTON")) moveHuntButtons();
+                if(getSettingByKey("GENERAL.HIDE_REST_BUTTON")) hideRestButtons();
 
                 clearObservers();
                 const huntLogContainer = document.querySelector("[tabindex='0'] > .chakra-container").lastChild
@@ -274,10 +274,10 @@
                 playerListRefreshEvent();
             }
 
-            function moveHuntButtons(){
+            function hideRestButtons(){
                 document.querySelectorAll("[tabindex='0'] > .chakra-container > div > button").forEach(button => {
-                    if(button.textContent === "休息") button.style.marginLeft = "auto";
-                    if(button.textContent === "清空記錄") button.style.marginLeft = "var(--chakra-space-2)";
+                    if(button.textContent === "休息") button.style.display = "none"; //button.style.marginLeft = "auto";
+                    // if(button.textContent === "清空記錄") button.style.marginLeft = "var(--chakra-space-2)";
                 });
 
             }
@@ -1231,8 +1231,8 @@
                     {
                         id: "rest-button",
                         type: "checkbox",
-                        label: "休息按鍵靠右",
-                        bindSetting: "GENERAL.MOVE_REST_BUTTON"
+                        label: "隱藏狩獵頁面的休息按鍵",
+                        bindSetting: "GENERAL.HIDE_REST_BUTTON"
                     },
                     {
                         id: "disable-true-stats",
