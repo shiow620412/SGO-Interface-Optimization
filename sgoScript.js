@@ -1756,8 +1756,20 @@
             createOpenDialogButton();
             if(isMobileDevice() && getSettingByKey("GENERAL.MOBILE_WRAP_NAVBAR")) wrapNavbar()
             if(getSettingByKey("GENERAL.BACKGROUND_IMAGE_URL") !== ""){
-                document.body.style.background = `#fff url(${getSettingByKey("GENERAL.BACKGROUND_IMAGE_URL")}) center center fixed no-repeat`;
-                document.body.style.backgroundSize = "cover";
+                const backgroundImageDiv = document.createElement("div");
+                backgroundImageDiv.style.cssText = `
+                    background: #fff url(${getSettingByKey("GENERAL.BACKGROUND_IMAGE_URL")}) center center fixed no-repeat;
+                    background-size: cover;
+                    width: 100%;
+                    height: 100%;
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    opacity: 0.5;
+                `
+                document.body.insertBefore(backgroundImageDiv, document.body.firstChild);
+                // document.body.style.background = ``;
+                // document.body.style.backgroundSize = "cover";
             }
             // createSettingUI();
             // registerSettingUIEvent();
