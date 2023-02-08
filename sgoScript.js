@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.25.0
+// @version      1.27.0
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,7 +13,7 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.25.0"
+    const VERSION = "1.27.0"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const FORGE_STORAGE_NAME = "forgeLog";
     const DEFAULT_SETTINGS = {
@@ -24,7 +24,8 @@
             ZONE_LEVEL: "#FF95CA", //樓層切換的顏色
             MARKET_WATCH: "#ffff00", // 關注中的訂單
             EXP_BAR_BACKGROUND: "#57595b",
-            EXP_BAR_FILL: "#aadc1e"
+            EXP_BAR_FILL: "#aadc1e",
+            EXP_BAR_FONT: "#fbfbfb"
         },
         WARNING: {
             EQUIPMENT: 20, //裝備低於多少耐久
@@ -39,7 +40,8 @@
             MOBILE_WRAP_NAVBAR: false,
             MOBILE_HUNT_REPORT: true,
             HUNT_STATUS_PERCENT: false,
-            SHOW_EXP_BAR: false
+            SHOW_EXP_BAR: false,
+            BACKGROUND_IMAGE_URL: "",
         },
         MARKET: {
             WATCH_LIST: [],
@@ -51,15 +53,15 @@
 
     let SETTINGS = loadSettings();
     const qualityJson = {
-        傳說: 2.3,
-        神話: 2.1,
+        傳說: 2.3, 
+        神話: 2.1, 
         史詩: 2.0,
-        完美: 1.8,
-        頂級: 1.7,
+        完美: 1.8, //1.85
+        頂級: 1.7, //1.65
         精良: 1.5,
-        高級: 1.35,
-        上等: 1.15,
-        普通: 1,
+        高級: 1.35, //1.33
+        上等: 1.15, //1.16
+        普通: 1, 
         次等: 0.9,
         劣質: 0.8,
         破爛: 0.7,
@@ -74,32 +76,7 @@
     const observers = [];
     const timers = [];
     const subscribeEvents = {};
-    const specialSubscribeEvents = {
-        profile: [
-            (data) => {
-                if(location.pathname === "/hunt" && getSettingByKey("GENERAL.HUNT_STATUS_PERCENT")){
-                    data.fullHp += ` (${Math.floor(data.hp / data.fullHp * 100)}%)`
-                    data.fullSp += ` (${Math.floor(data.sp / data.fullSp * 100)}%)`
-                }
-            },
-            (data) => {
-                if(getSettingByKey("GENERAL.SHOW_EXP_BAR")){
-                    if(!document.querySelector(".exp-container")) createExpBar();
-
-                    const expBar = document.querySelector("#exp-bar");
-                    const expBarFill = document.querySelector("#exp-bar-fill");
-                    const percent = Math.floor(data.exp / data.nextExp * 1000) / 10.0;
-                    document.querySelector("#exp-bar-level-label").textContent = `LV.${data.lv}`
-                    document.querySelector("#exp-bar-exp-label").textContent = `EXP:${data.exp} / ${data.nextExp} (${percent}%)`
-                    
-                    expBar.style.backgroundColor = getSettingByKey("COLOR.EXP_BAR_BACKGROUND");
-                    expBarFill.style.backgroundColor = getSettingByKey("COLOR.EXP_BAR_FILL")
-                    expBarFill.style.width = `${percent}%`;
-
-                }
-            }
-        ]
-    }
+    
     const pageScript = {
         "/profile": () => {
             bindEvent("/profile", () => {
@@ -350,9 +327,7 @@
                             if (!!~line.innerText.indexOf("點HP")) {
                                 battleLogEnd = true;
                                 //組隊戰鬥結束檢查
-                            } else if (
-                                profiles.filter((profile) => !profile.die).length === 0
-                            ) {
+                            } else if (profiles.filter((profile) => !profile.die).length === 0) {
                                 battleLogEnd = true;
                             }
                             if (battleLogEnd) {
@@ -383,6 +358,7 @@
                                 });
                                 //計算耐久
                                 let findEquipment = false;
+                                let equipmentBroken = false;
                                 equipments.forEach((equipment) => {
                                     //同名武器耐久篩選
                                     if (equipment.costDurablilty === 9999999 && !findEquipment) {
@@ -395,16 +371,19 @@
                                             equipment.msgClassname = line.className;
                                             equipment.costDurablilty = Number(matchArray[0]);
                                         }
-                                        if (
-                                            RegExp(`${equipment.name}損壞了`).test(line.innerText)
-                                        ) {
+                                        if (RegExp(`${equipment.name}損壞了`).test(line.innerText)) {
                                             equipment.costDurablilty = equipment.durability;
                                             findEquipment = true;
+                                            equipmentBroken = true;
                                         }
                                     }
                                 });
-
-                                informationDiv.appendChild(line);
+                                if(equipmentBroken) {
+                                    informationDiv.insertBefore(line, informationDiv.firstChild);
+                                }
+                                else{
+                                    informationDiv.appendChild(line);
+                                }
                             }
                         });
                         //裝備耐久提示
@@ -1005,7 +984,34 @@
             }
         },
     };
+    
+    const specialSubscribeEvents = {
+        profile: [
+            (data) => {
+                if(location.pathname === "/hunt" && getSettingByKey("GENERAL.HUNT_STATUS_PERCENT")){
+                    data.fullHp += ` (${Math.floor(data.hp / data.fullHp * 100)}%)`
+                    data.fullSp += ` (${Math.floor(data.sp / data.fullSp * 100)}%)`
+                }
+            },
+            (data) => {
+                if(getSettingByKey("GENERAL.SHOW_EXP_BAR")){
+                    if(!document.querySelector(".exp-container")) createExpBar();
 
+                    const expBar = document.querySelector("#exp-bar");
+                    const expBarFill = document.querySelector("#exp-bar-fill");
+                    const percent = Math.floor(data.exp / data.nextExp * 1000) / 10.0;
+                    document.querySelector("#exp-bar-level-label").textContent = `LV.${data.lv}`
+                    document.querySelector("#exp-bar-exp-label").textContent = `EXP:${data.exp} / ${data.nextExp} (${percent}%)`
+                    
+                    expBar.style.backgroundColor = getSettingByKey("COLOR.EXP_BAR_BACKGROUND");
+                    expBarFill.style.backgroundColor = getSettingByKey("COLOR.EXP_BAR_FILL")
+                    expBarFill.style.width = `${percent}%`;
+                    document.querySelector(".exp-container").style.color = getSettingByKey("COLOR.EXP_BAR_FONT");
+
+                }
+            }
+        ]
+    }
     const apiData = {}
     //攔截API回傳
     const _fetch = window.fetch;
@@ -1199,14 +1205,14 @@
             colorInput: (e) => {
                 const element = e.target;
                 const bindSetting = element.getAttribute("bind-setting");
-                if(!/^#[0-9a-fA-F]{6}$/.test(element.value)){
+                if(!/^#[0-9a-fA-F]{6}$|transparent/.test(element.value)){
                     element.value = getSettingByKey(bindSetting);
                 }
                 setObjectValueByRecursiveKey(SETTINGS, bindSetting, element.value);
                 element.nextElementSibling.style.color = element.value
                 saveSettings();
             },
-            input: (e) => {
+            numberInput: (e) => {
                 const element = e.target;
                 const bindSetting = element.getAttribute("bind-setting");
                 if(element.value === "" || Number.isNaN(Number(element.value))){
@@ -1214,6 +1220,12 @@
                     return;
                 }
                 setObjectValueByRecursiveKey(SETTINGS, bindSetting, Number(element.value))
+                saveSettings();
+            },
+            input: (e) => {
+                const element = e.target;
+                const bindSetting = element.getAttribute("bind-setting");                
+                setObjectValueByRecursiveKey(SETTINGS, bindSetting, element.value)
                 saveSettings();
             }
         }
@@ -1257,6 +1269,12 @@
                         type: "checkbox",
                         label: "顯示經驗條",
                         bindSetting: "GENERAL.SHOW_EXP_BAR"
+                    },
+                    {
+                        id: "background-image-url",
+                        type: "input",
+                        label: "自訂背景圖片",
+                        bindSetting: "GENERAL.BACKGROUND_IMAGE_URL"
                     }
                 ]
             },
@@ -1324,6 +1342,12 @@
                         type: "colorInput",
                         label: "經驗條填充色",
                         bindSetting: "COLOR.EXP_BAR_FILL"
+                    },
+                    {
+                        id: "exp-bar-font",
+                        type: "colorInput",
+                        label: "經驗條字體顏色",
+                        bindSetting: "COLOR.EXP_BAR_FONT"
                     }
                 ]
             },
@@ -1333,19 +1357,19 @@
                 rows:[
                     {
                         id: "equipment",
-                        type: "input",
+                        type: "numberInput",
                         label: "裝備耐久低於(數值)",
                         bindSetting: "WARNING.EQUIPMENT"
                     },
                     {
                         id: "hp",
-                        type: "input",
+                        type: "numberInput",
                         label: "血量單次耗損(百分比)",
                         bindSetting: "WARNING.HP"
                     },
                     {
                         id: "sp",
-                        type: "input",
+                        type: "numberInput",
                         label: "體力低於(數值)",
                         bindSetting: "WARNING.SP"
                     }
@@ -1384,6 +1408,15 @@
                     mainElement.onchange = rowEvent[rowData.type]
                 },
                 input: () => {
+                    rowDiv.innerHTML =  `
+                        <label for="${rowData.id}">${rowData.label}</label>
+                        <input type="text" id="${rowData.id}" bind-setting="${rowData.bindSetting}">
+                    `
+                    const mainElement = rowDiv.querySelector(`#${rowData.id}`);
+                    mainElement.value = getSettingByKey(rowData.bindSetting);
+                    mainElement.onchange = rowEvent[rowData.type]
+                },
+                numberInput: () => {
                     rowDiv.innerHTML =  `
                         <label for="${rowData.id}">${rowData.label}</label>
                         <input type="text" id="${rowData.id}" bind-setting="${rowData.bindSetting}">
@@ -1722,6 +1755,10 @@
             clearInterval(timer);
             createOpenDialogButton();
             if(isMobileDevice() && getSettingByKey("GENERAL.MOBILE_WRAP_NAVBAR")) wrapNavbar()
+            if(getSettingByKey("GENERAL.BACKGROUND_IMAGE_URL") !== ""){
+                document.body.style.background = `#fff url(${getSettingByKey("GENERAL.BACKGROUND_IMAGE_URL")}) center center fixed no-repeat`;
+                document.body.style.backgroundSize = "cover";
+            }
             // createSettingUI();
             // registerSettingUIEvent();
             loadObserver();
