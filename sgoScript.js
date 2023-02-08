@@ -1766,6 +1766,7 @@
                     top: 0;
                     left: 0;
                     opacity: 0.5;
+                    pointer-events: none;
                 `
                 document.body.insertBefore(backgroundImageDiv, document.body.firstChild);
                 // document.body.style.background = ``;
