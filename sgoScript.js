@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.28.0
+// @version      1.28.1
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,7 +13,7 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.28.0"
+    const VERSION = "1.28.1"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const FORGE_STORAGE_NAME = "forgeLog";
     const DEFAULT_SETTINGS = {
@@ -156,6 +156,16 @@
                             data.profile.fullHp += ` (${Math.floor(data.profile.hp / data.profile.fullHp * 100)}%)`
                             data.profile.fullSp += ` (${Math.floor(data.profile.sp / data.profile.fullSp * 100)}%)`
                         }
+
+                        if(currentZoneLevel === undefined) currentZoneLevel = data.profile.huntStage
+                        if(data.profile.huntStage > currentZoneLevel){
+                            data.messages.push({
+                                m: `爬到了${data.profile.zoneName} ${data.profile.huntStage}`,
+                                s: "info"
+                            })
+                        }
+                        currentZoneLevel = data.profile.huntStage;
+
                         data.meta.teamA.forEach(player => {
                             const {name, hp} = player;
                             const index = data.messages.findIndex(msg => msg.m.match(`^${name}還有 [0-9]+ 點HP`));
@@ -385,6 +395,11 @@
                                 else{
                                     informationDiv.appendChild(line);
                                 }
+
+                                if(/^爬到了(.*)/.test(line.innerText)){
+                                    line.style.color = getSettingByKey("COLOR.ZONE_LEVEL");
+                                    informationDiv.insertBefore(line, informationDiv.firstChild);
+                                }
                             }
                         });
                         //裝備耐久提示
@@ -402,14 +417,14 @@
                                 informationDiv.appendChild(equipmentMsgDiv);
                             }
                         });
-                        if(currentZoneLevel && getCurrentZoneLevel() > currentZoneLevel){
-                            const zoneLevelChangeDiv = document.createElement("div");
-                            zoneLevelChangeDiv.style.display = "flex";
-                            zoneLevelChangeDiv.style.color = getSettingByKey("COLOR.ZONE_LEVEL");
-                            zoneLevelChangeDiv.innerText = `爬到了${document.querySelector("[zones]").textContent.split("：")[1]}`
-                            informationDiv.appendChild(zoneLevelChangeDiv);
-                        }
-                        currentZoneLevel = getCurrentZoneLevel();
+                        // if(currentZoneLevel && getCurrentZoneLevel() > currentZoneLevel){
+                        //     const zoneLevelChangeDiv = document.createElement("div");
+                        //     zoneLevelChangeDiv.style.display = "flex";
+                        //     zoneLevelChangeDiv.style.color = getSettingByKey("COLOR.ZONE_LEVEL");
+                        //     zoneLevelChangeDiv.innerText = `爬到了${document.querySelector("[zones]").textContent.split("：")[1]}`
+                        //     informationDiv.insertBefore(zoneLevelChangeDiv, informationDiv.firstChild);
+                        // }
+                        // currentZoneLevel = getCurrentZoneLevel();
 
                         const leftDiv = document.createElement("div");
                         const rightDiv = document.createElement("div");
@@ -1045,14 +1060,27 @@
 
                     const expBar = document.querySelector("#exp-bar");
                     const expBarFill = document.querySelector("#exp-bar-fill");
-                    const percent = Math.floor(data.exp / data.nextExp * 1000) / 10.0;
+                    let percent = Math.floor(data.exp / data.nextExp * 1000) / 10.0;
                     document.querySelector("#exp-bar-level-label").textContent = `LV.${data.lv}`
                     document.querySelector("#exp-bar-exp-label").textContent = `EXP:${data.exp} / ${data.nextExp} (${percent}%)`
                     
                     expBar.style.backgroundColor = getSettingByKey("COLOR.EXP_BAR_BACKGROUND");
-                    expBarFill.style.backgroundColor = getSettingByKey("COLOR.EXP_BAR_FILL")
+                    expBarFill.style.backgroundColor = getSettingByKey("COLOR.EXP_BAR_FILL");
                     if(getSettingByKey("GENERAL.EXP_BAR_FILL_BACKGROUND_IMAGE_URL") !== ""){
-                        expBarFill.style.backgroundImage = `url(${getSettingByKey("GENERAL.EXP_BAR_FILL_BACKGROUND_IMAGE_URL")})`
+                        expBar.style.backgroundImage = `url(${getSettingByKey("GENERAL.EXP_BAR_FILL_BACKGROUND_IMAGE_URL")})`
+                        expBar.style.backgroundSize = "100% 24px";
+
+                        expBarFill.style.backgroundColor = getSettingByKey("COLOR.EXP_BAR_BACKGROUND");                        
+                        expBarFill.style.left = "unset";
+                        expBarFill.style.right = "0px";
+
+                        percent = 100 - percent;
+                        // expBarFill.style.backgroundImage = `url(${getSettingByKey("GENERAL.EXP_BAR_FILL_BACKGROUND_IMAGE_URL")})`
+                        // expBarFill.style.backgroundSize = "100% 24px";
+                    }else{
+                        expBar.style.backgroundImage = ``
+                        expBarFill.style.left = "";
+                        expBarFill.style.right = "";
                     }
                     expBarFill.style.width = `${percent}%`;
                     document.querySelector(".exp-container").style.color = getSettingByKey("COLOR.EXP_BAR_FONT");
