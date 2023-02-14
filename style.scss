@@ -208,3 +208,80 @@
     width: 100%;   
     bottom: 0px;
 }
+
+
+.quick-filter-container {
+
+    display: flex;
+    margin-bottom: 0.5rem;
+    align-items: center;
+    -webkit-box-align: center;
+
+    div {
+        width: 18px;
+        height: 18px;
+        margin-right: var(--chakra-space-3);
+        border-radius: 50%;
+        background: var(--chakra-colors-transparent);
+        border-width: 2px;
+        border-style: solid;
+        border-image: initial;        
+        cursor: pointer;
+    }
+
+    .circle-red {
+        border-color: var(--chakra-colors-red-500);
+        &:hover {
+            background-color: var(--chakra-colors-red-300);
+        }
+    }
+    .circle-blue {
+        border-color: var(--chakra-colors-blue-500);
+        &:hover {
+            background-color: var(--chakra-colors-blue-300);
+        }
+    }
+    .circle-cyan {
+        border-color: var(--chakra-colors-cyan-500);
+        &:hover {
+            background-color: var(--chakra-colors-cyan-300);
+        }
+    }
+    .circle-green {
+        border-color: var(--chakra-colors-green-500);
+        &:hover {
+            background-color: var(--chakra-colors-green-300);
+        }
+    }
+    .circle-teal {
+        border-color: var(--chakra-colors-teal-500);
+        &:hover {
+            background-color: var(--chakra-colors-teal-300);
+        }
+    }
+    .circle-orange {
+        border-color: var(--chakra-colors-orange-500);
+        &:hover {
+            background-color: var(--chakra-colors-orange-300);
+        }
+    }
+    .circle-yellow {
+        border-color: var(--chakra-colors-yellow-500);
+        &:hover {
+            background-color: var(--chakra-colors-yellow-300);
+        }
+    }
+    .circle-pink {
+        border-color: var(--chakra-colors-pink-500);
+        &:hover {
+            background-color: var(--chakra-colors-pink-300);
+        }
+    }
+    .circle-purple {
+        border-color: var(--chakra-colors-purple-500);
+        &:hover {
+            background-color: var(--chakra-colors-purple-300);
+        }
+    }
+    
+}

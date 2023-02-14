@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.27.0
+// @version      1.28.0
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,7 +13,7 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.27.0"
+    const VERSION = "1.28.0"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const FORGE_STORAGE_NAME = "forgeLog";
     const DEFAULT_SETTINGS = {
@@ -41,6 +41,7 @@
             MOBILE_HUNT_REPORT: true,
             HUNT_STATUS_PERCENT: false,
             SHOW_EXP_BAR: false,
+            EXP_BAR_FILL_BACKGROUND_IMAGE_URL: "",
             BACKGROUND_IMAGE_URL: "",
         },
         MARKET: {
@@ -528,33 +529,78 @@
                     table.id = tableId;
                     tablesColumns[tableId] = getTableColumns(table, sortTable);
 
-                    if( location.pathname !== "/market") return;
-                    const tbody = table.querySelector("tbody");
-                    function hightlightRow(){
-                        const rows = tbody.querySelectorAll("[role=row]");
-                        rows.forEach(row => { row.style.border = ""; });
-                        GLOBAL_HIGHTLIGHT_ROW[type].forEach(rowIndex => {
-                            if(rows.length > 0){
-                                // console.log(tbody.childNodes, rowIndex, tbody.childNodes[rowIndex])
-                                try{
-                                    rows[rowIndex].style.border = `solid ${getSettingByKey("COLOR.MARKET_WATCH")}`;
-                                }catch(e) {
-                                    console.error(rowIndex, rows );
+                    if(location.pathname === "/items") {
+                        createQuickFilter(table);
+                    }else if(location.pathname === "/market"){
+
+                        const tbody = table.querySelector("tbody");
+                        function hightlightRow(){
+                            const rows = tbody.querySelectorAll("[role=row]");
+                            rows.forEach(row => { row.style.border = ""; });
+                            GLOBAL_HIGHTLIGHT_ROW[type].forEach(rowIndex => {
+                                if(rows.length > 0){
+                                    // console.log(tbody.childNodes, rowIndex, tbody.childNodes[rowIndex])
+                                    try{
+                                        rows[rowIndex].style.border = `solid ${getSettingByKey("COLOR.MARKET_WATCH")}`;
+                                    }catch(e) {
+                                        console.error(rowIndex, rows );
+                                    }
                                 }
-                            }
-                        });
+                            });
+                        }
+                        const observer = new MutationObserver(hightlightRow);
+                        // tbody.firstChild.remove();
+                        observer.observe(tbody, {subtree: false, childList:true })
+                        observers.push(observer);
+                        tbody.appendChild(document.createElement("tr"));
+                        // hightlightRow();
                     }
-                    const observer = new MutationObserver(hightlightRow);
-                    // tbody.firstChild.remove();
-                    observer.observe(tbody, {subtree: false, childList:true })
-                    observers.push(observer);
-                    tbody.appendChild(document.createElement("tr"));
-                    // hightlightRow();
+                    
+
+
+                    
                 });
 
                 // document.querySelector(".chakra-container > div > button")?.click()
             });
 
+            function createQuickFilter(table) {
+                const quickFilterContainer = document.createElement("div");
+                
+                quickFilterContainer.classList.add("quick-filter-container");
+                quickFilterContainer.innerText = "快篩："
+
+                const colors = ["red", "blue", "cyan", "green", "teal", "orange", "yellow", "pink", "purple"];
+                colors.forEach(color => {
+                    const circle = document.createElement("div");
+                    circle.classList.add(`circle-${color}`);
+
+                    circle.onclick = (e) => {
+                        let lastClickCircle;
+                        circle.parentNode.querySelectorAll("div").forEach(div => {
+                            if(div.style.backgroundColor !== "") lastClickCircle = div;
+                            div.style.backgroundColor = ""
+                        })
+                        let targetColor = "";
+                        if(lastClickCircle !== circle) {
+                            circle.style.backgroundColor = `var(--chakra-colors-${color}-500)`;
+                            targetColor = getComputedStyle(circle).backgroundColor;
+                        }
+                        table.querySelectorAll("tr > td:nth-child(1) > div").forEach(div => {
+                            const tr = div.parentElement.parentElement;
+                            if(targetColor === "" || getComputedStyle(div).borderColor === targetColor){
+                                tr.style.display = "";
+                            }else{
+                                tr.style.display = "none";
+                            }
+                        });
+                    };
+
+                    quickFilterContainer.appendChild(circle);
+                });
+
+                table.before(quickFilterContainer);
+            }
             function sortTable(e) {
                 const tableDOM = e.target.parentElement.parentElement.parentElement;
                 const sortClassDOM = tableDOM.querySelector(".sort");
@@ -621,8 +667,8 @@
 
                 let equipmentNameMatch = regexGetValue("(傳說|神話|史詩|完美|頂級|精良|高級|上等|普通|次等|劣質|破爛|垃圾般|屎一般)的 (.*)", targetDom.querySelector("h2").innerText);
                 if (equipmentNameMatch.length < 2) return console.error("quality error");
-
-                const equipmentName = equipmentNameMatch[1];
+                
+                const equipmentName = equipmentNameMatch[1].replace(/\ \+\ [0-9]+/, "");
                 const ratio = qualityJson[equipmentNameMatch[0]];
                 if (!ratio) return console.error("ratio error");
 
@@ -1005,11 +1051,19 @@
                     
                     expBar.style.backgroundColor = getSettingByKey("COLOR.EXP_BAR_BACKGROUND");
                     expBarFill.style.backgroundColor = getSettingByKey("COLOR.EXP_BAR_FILL")
+                    if(getSettingByKey("GENERAL.EXP_BAR_FILL_BACKGROUND_IMAGE_URL") !== ""){
+                        expBarFill.style.backgroundImage = `url(${getSettingByKey("GENERAL.EXP_BAR_FILL_BACKGROUND_IMAGE_URL")})`
+                    }
                     expBarFill.style.width = `${percent}%`;
                     document.querySelector(".exp-container").style.color = getSettingByKey("COLOR.EXP_BAR_FONT");
 
                 }
             }
+        ],
+        players: [
+            (data) => {
+                
+            },
         ]
     }
     const apiData = {}
@@ -1174,7 +1228,8 @@
             </svg>
         `
         const style = document.createElement("style");
-        style.innerText = `*{box-sizing:border-box}.wrapper{display:flex;align-items:center;justify-content:center;background-color:rgba(15,19,26,.8);height:100vh;position:fixed;width:100%;left:0;top:0;overflow:auto;z-index:9999}.header{display:flex;justify-content:space-between;margin:1rem 1rem 0 1rem}.header button{height:100%}.header h1{color:#fff}.header #reset-settings-btn{border:1px solid #3c3f43;margin-right:1rem}.content{display:flex;margin:0 1rem 1rem 1rem;flex-direction:column}.content hr{width:100%}.panel{position:relative;width:100%;display:flex;flex-direction:column}.panel input[type=checkbox]{margin:.5rem}.panel input[type=text]{background-color:#1a1d24;background-image:none;border:1px solid #3c3f43;border-radius:6px;color:#e9ebf0;display:block;font-size:14px;line-height:1.42857143;padding:7px 11px;transition:border-color .3s ease-in-out;width:100px}.panel+.panel::before{border-top:1px solid #3c3f43;content:"";left:20px;position:absolute;right:20px;top:0}.panel-header{width:100%;padding:20px}.panel-header span{color:#fff;font-size:16px;line-height:1.25}.panel-body{padding:0 20px 20px 20px}.panel-body .row{margin-top:1rem;display:flex;align-items:center}.panel-body .row label{color:#a4a9b3;margin-right:1rem}.panel-body .row input{margin-right:1rem}.panel-body .row.table{flex-direction:column;align-items:flex-start}.grid{margin-top:10px;width:100%;color:#a4a9b3;background-color:#1a1d24}.grid div{border-bottom:1px solid #292d33;width:100%;height:40px;padding:10px}.grid .grid-row{display:flex;align-items:center}.grid .grid-row:hover{background-color:#3c3f43}.grid .grid-row button{font-size:14px;border:none;background-color:rgba(0,0,0,0);color:#9146ff;margin-left:auto}.grid .grid-row button:hover{cursor:pointer}.description{margin:0px;color:#a4a9b3;line-height:1.5;font-size:8px}.dialog{width:800px;height:500px;left:0;top:0;overflow:auto;z-index:9999;background-color:#292d33;border-radius:6px;box-shadow:0 4px 4px rgba(0,0,0,.12),0 0 10px rgba(0,0,0,.06)}#open-dialog-btn{position:-webkit-sticky;position:sticky;left:0;bottom:20px;margin-right:1rem;z-index:9998;color:#7d7d7d;background-color:rgba(0,0,0,0);border:none}#open-dialog-btn:hover{color:#fff}[hidden]{display:none}#exp-bar{position:fixed;bottom:0px;width:100%;height:24px}#exp-bar-fill{position:fixed;bottom:0px;left:0px;height:24px}.exp-container{display:flex;justify-content:flex-end;position:fixed;width:100%;bottom:0px}`
+        //scss
+        style.innerText = `*{box-sizing:border-box}.wrapper{display:flex;align-items:center;justify-content:center;background-color:rgba(15,19,26,.8);height:100vh;position:fixed;width:100%;left:0;top:0;overflow:auto;z-index:9999}.header{display:flex;justify-content:space-between;margin:1rem 1rem 0 1rem}.header button{height:100%}.header h1{color:#fff}.header #reset-settings-btn{border:1px solid #3c3f43;margin-right:1rem}.content{display:flex;margin:0 1rem 1rem 1rem;flex-direction:column}.content hr{width:100%}.panel{position:relative;width:100%;display:flex;flex-direction:column}.panel input[type=checkbox]{margin:.5rem}.panel input[type=text]{background-color:#1a1d24;background-image:none;border:1px solid #3c3f43;border-radius:6px;color:#e9ebf0;display:block;font-size:14px;line-height:1.42857143;padding:7px 11px;transition:border-color .3s ease-in-out;width:100px}.panel+.panel::before{border-top:1px solid #3c3f43;content:"";left:20px;position:absolute;right:20px;top:0}.panel-header{width:100%;padding:20px}.panel-header span{color:#fff;font-size:16px;line-height:1.25}.panel-body{padding:0 20px 20px 20px}.panel-body .row{margin-top:1rem;display:flex;align-items:center}.panel-body .row label{color:#a4a9b3;margin-right:1rem}.panel-body .row input{margin-right:1rem}.panel-body .row.table{flex-direction:column;align-items:flex-start}.grid{margin-top:10px;width:100%;color:#a4a9b3;background-color:#1a1d24}.grid div{border-bottom:1px solid #292d33;width:100%;height:40px;padding:10px}.grid .grid-row{display:flex;align-items:center}.grid .grid-row:hover{background-color:#3c3f43}.grid .grid-row button{font-size:14px;border:none;background-color:rgba(0,0,0,0);color:#9146ff;margin-left:auto}.grid .grid-row button:hover{cursor:pointer}.description{margin:0px;color:#a4a9b3;line-height:1.5;font-size:8px}.dialog{width:800px;height:500px;left:0;top:0;overflow:auto;z-index:9999;background-color:#292d33;border-radius:6px;box-shadow:0 4px 4px rgba(0,0,0,.12),0 0 10px rgba(0,0,0,.06)}#open-dialog-btn{position:-webkit-sticky;position:sticky;left:0;bottom:20px;margin-right:1rem;z-index:9998;color:#7d7d7d;background-color:rgba(0,0,0,0);border:none}#open-dialog-btn:hover{color:#fff}[hidden]{display:none}#exp-bar{position:fixed;bottom:0px;width:100%;height:24px}#exp-bar-fill{position:fixed;bottom:0px;left:0px;height:24px}.exp-container{display:flex;justify-content:flex-end;position:fixed;width:100%;bottom:0px}.quick-filter-container{display:flex;margin-bottom:.5rem;align-items:center;-webkit-box-align:center}.quick-filter-container div{width:18px;height:18px;margin-right:var(--chakra-space-3);border-radius:50%;background:var(--chakra-colors-transparent);border-width:2px;border-style:solid;-o-border-image:initial;border-image:initial;cursor:pointer}.quick-filter-container .circle-red{border-color:var(--chakra-colors-red-500)}.quick-filter-container .circle-red:hover{background-color:var(--chakra-colors-red-300)}.quick-filter-container .circle-blue{border-color:var(--chakra-colors-blue-500)}.quick-filter-container .circle-blue:hover{background-color:var(--chakra-colors-blue-300)}.quick-filter-container .circle-cyan{border-color:var(--chakra-colors-cyan-500)}.quick-filter-container .circle-cyan:hover{background-color:var(--chakra-colors-cyan-300)}.quick-filter-container .circle-green{border-color:var(--chakra-colors-green-500)}.quick-filter-container .circle-green:hover{background-color:var(--chakra-colors-green-300)}.quick-filter-container .circle-teal{border-color:var(--chakra-colors-teal-500)}.quick-filter-container .circle-teal:hover{background-color:var(--chakra-colors-teal-300)}.quick-filter-container .circle-orange{border-color:var(--chakra-colors-orange-500)}.quick-filter-container .circle-orange:hover{background-color:var(--chakra-colors-orange-300)}.quick-filter-container .circle-yellow{border-color:var(--chakra-colors-yellow-500)}.quick-filter-container .circle-yellow:hover{background-color:var(--chakra-colors-yellow-300)}.quick-filter-container .circle-pink{border-color:var(--chakra-colors-pink-500)}.quick-filter-container .circle-pink:hover{background-color:var(--chakra-colors-pink-300)}.quick-filter-container .circle-purple{border-color:var(--chakra-colors-purple-500)}.quick-filter-container .circle-purple:hover{background-color:var(--chakra-colors-purple-300)}`;
         // document.querySelector("#open-dialog-btn").onclick = () => {createSettingUI(); registerSettingUIEvent();}
         openDialogBtn.onclick = () => {createSettingUI(); registerSettingUIEvent();}
         document.body.appendChild(style);
@@ -1269,6 +1324,12 @@
                         type: "checkbox",
                         label: "顯示經驗條",
                         bindSetting: "GENERAL.SHOW_EXP_BAR"
+                    },
+                    {
+                        id: "exp-bar-fill-background-image-url",
+                        type: "input",
+                        label: "自訂經驗條填充圖片",
+                        bindSetting: "GENERAL.EXP_BAR_FILL_BACKGROUND_IMAGE_URL"
                     },
                     {
                         id: "background-image-url",
