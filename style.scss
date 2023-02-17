@@ -284,4 +284,10 @@
         }
     }
     
+    .circle-gray {
+        border-color: var(--chakra-colors-gray-500);
+        &:hover {
+            background-color: var(--chakra-colors-gray-300);
+        }
+    }
 }

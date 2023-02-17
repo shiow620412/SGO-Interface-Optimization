@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.28.1
+// @version      1.29.0
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,7 +13,7 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.28.1"
+    const VERSION = "1.29.0"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const FORGE_STORAGE_NAME = "forgeLog";
     const DEFAULT_SETTINGS = {
@@ -54,26 +54,27 @@
 
     let SETTINGS = loadSettings();
     const qualityJson = {
-        傳說: 2.3, 
-        神話: 2.1, 
-        史詩: 2.0,
-        完美: 1.8, //1.85
-        頂級: 1.7, //1.65
-        精良: 1.5,
-        高級: 1.35, //1.33
-        上等: 1.15, //1.16
-        普通: 1, 
-        次等: 0.9,
-        劣質: 0.8,
-        破爛: 0.7,
-        垃圾般: 0.55,
-        屎一般: 0.4,
+        傳說: [2.3, 0.82],
+        神話: [2.1, 0.84],
+        史詩: [2.0, 0.85],
+        完美: [1.85, 0.87],
+        頂級: [1.65, 0.88],
+        精良: [1.5, 0.9],
+        高級: [1.33, 0.93],
+        上等: [1.15, 0.96],
+        普通: [1, 1],
+        次等: [0.9, 1.01],
+        劣質: [0.8, 1.02],
+        破爛: [0.7, 1.03],
+        垃圾般: [0.55, 1.06],
+        屎一般: [0.4, 1.1],
     };
     const GLOBAL_HIGHTLIGHT_ROW = {
         equipments: [],
         mines: [],
         items: []
     }
+    let GLOBAL_EQUIPMENTS = []
     const observers = [];
     const timers = [];
     const subscribeEvents = {};
@@ -585,7 +586,7 @@
                 quickFilterContainer.classList.add("quick-filter-container");
                 quickFilterContainer.innerText = "快篩："
 
-                const colors = ["red", "blue", "cyan", "green", "teal", "orange", "yellow", "pink", "purple"];
+                const colors = ["red", "blue", "cyan", "green", "teal", "orange", "yellow", "pink", "purple", "gray"];
                 colors.forEach(color => {
                     const circle = document.createElement("div");
                     circle.classList.add(`circle-${color}`);
@@ -599,7 +600,7 @@
                         let targetColor = "";
                         if(lastClickCircle !== circle) {
                             circle.style.backgroundColor = `var(--chakra-colors-${color}-500)`;
-                            targetColor = getComputedStyle(circle).backgroundColor;
+                            targetColor = color === "gray" ? "rgba(0, 0, 0, 0)" : getComputedStyle(circle).backgroundColor;
                         }
                         table.querySelectorAll("tr > td:nth-child(1) > div").forEach(div => {
                             const tr = div.parentElement.parentElement;
@@ -682,8 +683,9 @@
 
                 let equipmentNameMatch = regexGetValue("(傳說|神話|史詩|完美|頂級|精良|高級|上等|普通|次等|劣質|破爛|垃圾般|屎一般)的 (.*)", targetDom.querySelector("h2").innerText);
                 if (equipmentNameMatch.length < 2) return console.error("quality error");
-                
-                const equipmentName = equipmentNameMatch[1].replace(/\ \+\ [0-9]+/, "");
+
+                //replace把強化次數移除 
+                const equipmentName = equipmentNameMatch[1].replace(/\ \+\ [0-9]+/, ""); 
                 const ratio = qualityJson[equipmentNameMatch[0]];
                 if (!ratio) return console.error("ratio error");
 
@@ -720,10 +722,10 @@
                     });
 
                 const trueStats = [atk, def, luck].map((num) => {
-                    return (num / ratio).toFixed(2);
+                    return (num / ratio[0]).toFixed(2);
                 });
-                trueStats.push(kg.toFixed(2));
-                trueStats.push((dur / ratio).toFixed(2));
+                trueStats.push((kg / ratio[1]).toFixed(2));
+                trueStats.push((dur / ratio[0]).toFixed(2));
 
                 const colorSpan = document.createElement("span");
                 colorSpan.style.color = getSettingByKey("COLOR.TRUE_STATS");
@@ -1088,9 +1090,9 @@
                 }
             }
         ],
-        players: [
+        items: [
             (data) => {
-                
+                GLOBAL_EQUIPMENTS = structuredClone(data.equipments);
             },
         ]
     }
@@ -1105,13 +1107,15 @@
 
         //特殊問題 部分電腦的url不是字串而是requestInfo 需要取其中的url property來拿到api網址
         const apiUrl = regexGetValue("api/(.*)", typeof url === "string" ? url : url.url);
+        // console.log(url, apiUrl);
         if(apiUrl.length){
             if(jsonObject.profile){
                 apiData["profile"] = structuredClone(jsonObject.profile);
             
                 triggerEventHook("profile");
 
-            }else if(apiUrl[0].match("trades\\?category=[a-z]+")){ //特例常駐subscribe
+            }
+            if(apiUrl[0].match("trades\\?category=[a-z]+")){ //特例常駐subscribe
                 apiData[apiUrl[0]] = structuredClone(jsonObject);
                 triggerEventHook(apiUrl[0]);
 
@@ -1135,6 +1139,20 @@
                 // apiData[apiUrl[0]].trades.forEach((trade, index) => {
                 // });
 
+            }else if(apiUrl[0].match("equipment\/([0-9]+)\/recycle")){
+                const equipmentId = regexGetValue("equipment\/([0-9]+)\/recycle", apiUrl[0])[0];
+                const equipment = GLOBAL_EQUIPMENTS.find(equipment => equipment.id === Number(equipmentId));
+                if(equipment && equipment.crafter !== null){
+                    const forgeTime = new Date(`${equipment.craftedTime}`)
+                    forgeTime.setSeconds(0);
+                    forgeTime.setMilliseconds(0);
+                    const base64 =  btoa(encodeURIComponent(`${forgeTime.getTime()},${equipment.name},${equipment.crafter}`))
+
+                    if(FORGE_LOG[base64]){
+                        delete FORGE_LOG[base64];
+                        saveForgeLog();
+                    }
+                }
             }
             // else if(location.pathname === "/hunt" && apiUrl[0] === "profile" && getSettingByKey("GENERAL.HUNT_STATUS_PERCENT")){
             //     //狩獵頁面 顯示生命與體力的百分比
@@ -1257,7 +1275,7 @@
         `
         const style = document.createElement("style");
         //scss
-        style.innerText = `*{box-sizing:border-box}.wrapper{display:flex;align-items:center;justify-content:center;background-color:rgba(15,19,26,.8);height:100vh;position:fixed;width:100%;left:0;top:0;overflow:auto;z-index:9999}.header{display:flex;justify-content:space-between;margin:1rem 1rem 0 1rem}.header button{height:100%}.header h1{color:#fff}.header #reset-settings-btn{border:1px solid #3c3f43;margin-right:1rem}.content{display:flex;margin:0 1rem 1rem 1rem;flex-direction:column}.content hr{width:100%}.panel{position:relative;width:100%;display:flex;flex-direction:column}.panel input[type=checkbox]{margin:.5rem}.panel input[type=text]{background-color:#1a1d24;background-image:none;border:1px solid #3c3f43;border-radius:6px;color:#e9ebf0;display:block;font-size:14px;line-height:1.42857143;padding:7px 11px;transition:border-color .3s ease-in-out;width:100px}.panel+.panel::before{border-top:1px solid #3c3f43;content:"";left:20px;position:absolute;right:20px;top:0}.panel-header{width:100%;padding:20px}.panel-header span{color:#fff;font-size:16px;line-height:1.25}.panel-body{padding:0 20px 20px 20px}.panel-body .row{margin-top:1rem;display:flex;align-items:center}.panel-body .row label{color:#a4a9b3;margin-right:1rem}.panel-body .row input{margin-right:1rem}.panel-body .row.table{flex-direction:column;align-items:flex-start}.grid{margin-top:10px;width:100%;color:#a4a9b3;background-color:#1a1d24}.grid div{border-bottom:1px solid #292d33;width:100%;height:40px;padding:10px}.grid .grid-row{display:flex;align-items:center}.grid .grid-row:hover{background-color:#3c3f43}.grid .grid-row button{font-size:14px;border:none;background-color:rgba(0,0,0,0);color:#9146ff;margin-left:auto}.grid .grid-row button:hover{cursor:pointer}.description{margin:0px;color:#a4a9b3;line-height:1.5;font-size:8px}.dialog{width:800px;height:500px;left:0;top:0;overflow:auto;z-index:9999;background-color:#292d33;border-radius:6px;box-shadow:0 4px 4px rgba(0,0,0,.12),0 0 10px rgba(0,0,0,.06)}#open-dialog-btn{position:-webkit-sticky;position:sticky;left:0;bottom:20px;margin-right:1rem;z-index:9998;color:#7d7d7d;background-color:rgba(0,0,0,0);border:none}#open-dialog-btn:hover{color:#fff}[hidden]{display:none}#exp-bar{position:fixed;bottom:0px;width:100%;height:24px}#exp-bar-fill{position:fixed;bottom:0px;left:0px;height:24px}.exp-container{display:flex;justify-content:flex-end;position:fixed;width:100%;bottom:0px}.quick-filter-container{display:flex;margin-bottom:.5rem;align-items:center;-webkit-box-align:center}.quick-filter-container div{width:18px;height:18px;margin-right:var(--chakra-space-3);border-radius:50%;background:var(--chakra-colors-transparent);border-width:2px;border-style:solid;-o-border-image:initial;border-image:initial;cursor:pointer}.quick-filter-container .circle-red{border-color:var(--chakra-colors-red-500)}.quick-filter-container .circle-red:hover{background-color:var(--chakra-colors-red-300)}.quick-filter-container .circle-blue{border-color:var(--chakra-colors-blue-500)}.quick-filter-container .circle-blue:hover{background-color:var(--chakra-colors-blue-300)}.quick-filter-container .circle-cyan{border-color:var(--chakra-colors-cyan-500)}.quick-filter-container .circle-cyan:hover{background-color:var(--chakra-colors-cyan-300)}.quick-filter-container .circle-green{border-color:var(--chakra-colors-green-500)}.quick-filter-container .circle-green:hover{background-color:var(--chakra-colors-green-300)}.quick-filter-container .circle-teal{border-color:var(--chakra-colors-teal-500)}.quick-filter-container .circle-teal:hover{background-color:var(--chakra-colors-teal-300)}.quick-filter-container .circle-orange{border-color:var(--chakra-colors-orange-500)}.quick-filter-container .circle-orange:hover{background-color:var(--chakra-colors-orange-300)}.quick-filter-container .circle-yellow{border-color:var(--chakra-colors-yellow-500)}.quick-filter-container .circle-yellow:hover{background-color:var(--chakra-colors-yellow-300)}.quick-filter-container .circle-pink{border-color:var(--chakra-colors-pink-500)}.quick-filter-container .circle-pink:hover{background-color:var(--chakra-colors-pink-300)}.quick-filter-container .circle-purple{border-color:var(--chakra-colors-purple-500)}.quick-filter-container .circle-purple:hover{background-color:var(--chakra-colors-purple-300)}`;
+        style.innerText = `*{box-sizing:border-box}.wrapper{display:flex;align-items:center;justify-content:center;background-color:rgba(15,19,26,.8);height:100vh;position:fixed;width:100%;left:0;top:0;overflow:auto;z-index:9999}.header{display:flex;justify-content:space-between;margin:1rem 1rem 0 1rem}.header button{height:100%}.header h1{color:#fff}.header #reset-settings-btn{border:1px solid #3c3f43;margin-right:1rem}.content{display:flex;margin:0 1rem 1rem 1rem;flex-direction:column}.content hr{width:100%}.panel{position:relative;width:100%;display:flex;flex-direction:column}.panel input[type=checkbox]{margin:.5rem}.panel input[type=text]{background-color:#1a1d24;background-image:none;border:1px solid #3c3f43;border-radius:6px;color:#e9ebf0;display:block;font-size:14px;line-height:1.42857143;padding:7px 11px;transition:border-color .3s ease-in-out;width:100px}.panel+.panel::before{border-top:1px solid #3c3f43;content:"";left:20px;position:absolute;right:20px;top:0}.panel-header{width:100%;padding:20px}.panel-header span{color:#fff;font-size:16px;line-height:1.25}.panel-body{padding:0 20px 20px 20px}.panel-body .row{margin-top:1rem;display:flex;align-items:center}.panel-body .row label{color:#a4a9b3;margin-right:1rem}.panel-body .row input{margin-right:1rem}.panel-body .row.table{flex-direction:column;align-items:flex-start}.grid{margin-top:10px;width:100%;color:#a4a9b3;background-color:#1a1d24}.grid div{border-bottom:1px solid #292d33;width:100%;height:40px;padding:10px}.grid .grid-row{display:flex;align-items:center}.grid .grid-row:hover{background-color:#3c3f43}.grid .grid-row button{font-size:14px;border:none;background-color:rgba(0,0,0,0);color:#9146ff;margin-left:auto}.grid .grid-row button:hover{cursor:pointer}.description{margin:0px;color:#a4a9b3;line-height:1.5;font-size:8px}.dialog{width:800px;height:500px;left:0;top:0;overflow:auto;z-index:9999;background-color:#292d33;border-radius:6px;box-shadow:0 4px 4px rgba(0,0,0,.12),0 0 10px rgba(0,0,0,.06)}#open-dialog-btn{position:-webkit-sticky;position:sticky;left:0;bottom:20px;margin-right:1rem;z-index:9998;color:#7d7d7d;background-color:rgba(0,0,0,0);border:none}#open-dialog-btn:hover{color:#fff}[hidden]{display:none}#exp-bar{position:fixed;bottom:0px;width:100%;height:24px}#exp-bar-fill{position:fixed;bottom:0px;left:0px;height:24px}.exp-container{display:flex;justify-content:flex-end;position:fixed;width:100%;bottom:0px}.quick-filter-container{display:flex;margin-bottom:.5rem;align-items:center;-webkit-box-align:center}.quick-filter-container div{width:18px;height:18px;margin-right:var(--chakra-space-3);border-radius:50%;background:var(--chakra-colors-transparent);border-width:2px;border-style:solid;-o-border-image:initial;border-image:initial;cursor:pointer}.quick-filter-container .circle-red{border-color:var(--chakra-colors-red-500)}.quick-filter-container .circle-red:hover{background-color:var(--chakra-colors-red-300)}.quick-filter-container .circle-blue{border-color:var(--chakra-colors-blue-500)}.quick-filter-container .circle-blue:hover{background-color:var(--chakra-colors-blue-300)}.quick-filter-container .circle-cyan{border-color:var(--chakra-colors-cyan-500)}.quick-filter-container .circle-cyan:hover{background-color:var(--chakra-colors-cyan-300)}.quick-filter-container .circle-green{border-color:var(--chakra-colors-green-500)}.quick-filter-container .circle-green:hover{background-color:var(--chakra-colors-green-300)}.quick-filter-container .circle-teal{border-color:var(--chakra-colors-teal-500)}.quick-filter-container .circle-teal:hover{background-color:var(--chakra-colors-teal-300)}.quick-filter-container .circle-orange{border-color:var(--chakra-colors-orange-500)}.quick-filter-container .circle-orange:hover{background-color:var(--chakra-colors-orange-300)}.quick-filter-container .circle-yellow{border-color:var(--chakra-colors-yellow-500)}.quick-filter-container .circle-yellow:hover{background-color:var(--chakra-colors-yellow-300)}.quick-filter-container .circle-pink{border-color:var(--chakra-colors-pink-500)}.quick-filter-container .circle-pink:hover{background-color:var(--chakra-colors-pink-300)}.quick-filter-container .circle-purple{border-color:var(--chakra-colors-purple-500)}.quick-filter-container .circle-purple:hover{background-color:var(--chakra-colors-purple-300)}.quick-filter-container .circle-gray{border-color:var(--chakra-colors-gray-500)}.quick-filter-container .circle-gray:hover{background-color:var(--chakra-colors-gray-300)}`;
         // document.querySelector("#open-dialog-btn").onclick = () => {createSettingUI(); registerSettingUIEvent();}
         openDialogBtn.onclick = () => {createSettingUI(); registerSettingUIEvent();}
         document.body.appendChild(style);
