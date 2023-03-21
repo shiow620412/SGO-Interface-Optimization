@@ -3,6 +3,14 @@
 ## [GitHub](https://github.com/shiow620412/SGO-Interface-Optimization)  
 ## 有任何問題或建議 歡迎找我提出 DC:Wind#2131
 
+* Ver 1.30.0
+  
+  * 新增設定-裝備損壞超級提示！！！！！！！！！
+  
+* Ver 1.29.1
+  
+  * 嘗試修正-針對手機背景圖片問題
+  
 * Ver 1.29.0
   
   * 原始素質倍率調整

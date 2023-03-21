@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.29.0
+// @version      1.30.0
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,7 +13,7 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.29.0"
+    const VERSION = "1.30.0"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const FORGE_STORAGE_NAME = "forgeLog";
     const DEFAULT_SETTINGS = {
@@ -41,6 +41,7 @@
             MOBILE_HUNT_REPORT: true,
             HUNT_STATUS_PERCENT: false,
             SHOW_EXP_BAR: false,
+            RED_BACKBROUND_WHEN_EQUIPMENT_BROKEN: false,
             EXP_BAR_FILL_BACKGROUND_IMAGE_URL: "",
             BACKGROUND_IMAGE_URL: "",
         },
@@ -200,6 +201,11 @@
                             }
                             data.messages.splice(index+1, 0, msg)
                         }
+
+                        if(data.messages.find(msg => RegExp(`損壞了$`).test(msg.m)) && getSettingByKey("GENERAL.RED_BACKBROUND_WHEN_EQUIPMENT_BROKEN")){
+                            document.querySelector("#__next").style.backgroundColor = "var(--chakra-colors-red-500)";
+                        }
+                        
                     });
 
                     // subscribeApi("profile", (data) => {
@@ -391,7 +397,7 @@
                                     }
                                 });
                                 if(equipmentBroken) {
-                                    informationDiv.insertBefore(line, informationDiv.firstChild);
+                                    informationDiv.insertBefore(line, informationDiv.firstChild);                                    
                                 }
                                 else{
                                     informationDiv.appendChild(line);
@@ -1088,12 +1094,26 @@
                     document.querySelector(".exp-container").style.color = getSettingByKey("COLOR.EXP_BAR_FONT");
 
                 }
+            },
+            (data) => {
+              
             }
         ],
         items: [
             (data) => {
                 GLOBAL_EQUIPMENTS = structuredClone(data.equipments);
+
+                // const filter = ["單手劍"]
+                // data.equipments = data.equipments.filter(equipment => !filter.includes(equipment.typeName))
             },
+        ],
+        "rankings?type=masters": [
+            (data) => {
+                // data.sword = data.sword.map(player => {
+                //     player.nickname = "0.0"
+                //     return player
+                // })
+            }
         ]
     }
     const apiData = {}
@@ -1370,6 +1390,12 @@
                         type: "checkbox",
                         label: "顯示經驗條",
                         bindSetting: "GENERAL.SHOW_EXP_BAR"
+                    },
+                    {
+                        id: "red-backround-when-equipment-broken",
+                        type: "checkbox",
+                        label: "裝備損壞超級提示",
+                        bindSetting: "GENERAL.RED_BACKBROUND_WHEN_EQUIPMENT_BROKEN"
                     },
                     {
                         id: "exp-bar-fill-background-image-url",
@@ -1867,6 +1893,7 @@
                 backgroundImageDiv.style.cssText = `
                     background: #fff url(${getSettingByKey("GENERAL.BACKGROUND_IMAGE_URL")}) center center fixed no-repeat;
                     background-size: cover;
+                    -webkit-background-size: cover;
                     width: 100%;
                     height: 100%;
                     position: fixed;
@@ -1875,6 +1902,9 @@
                     opacity: 0.5;
                     pointer-events: none;
                 `
+                if((/Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent)))
+                    backgroundImageDiv.style.cssText += "background-attachment: scroll;"
+                backgroundImageDiv.id = "background-image-div";
                 document.body.insertBefore(backgroundImageDiv, document.body.firstChild);
                 // document.body.style.background = ``;
                 // document.body.style.backgroundSize = "cover";
