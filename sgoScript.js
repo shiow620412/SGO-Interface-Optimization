@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.30.0
+// @version      1.30.1
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,7 +13,7 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.30.0"
+    const VERSION = "1.30.1"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const FORGE_STORAGE_NAME = "forgeLog";
     const DEFAULT_SETTINGS = {
@@ -204,6 +204,8 @@
 
                         if(data.messages.find(msg => RegExp(`損壞了$`).test(msg.m)) && getSettingByKey("GENERAL.RED_BACKBROUND_WHEN_EQUIPMENT_BROKEN")){
                             document.querySelector("#__next").style.backgroundColor = "var(--chakra-colors-red-500)";
+                        }else{
+                            document.querySelector("#__next").style.backgroundColor = "";                            
                         }
                         
                     });

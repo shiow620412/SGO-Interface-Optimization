@@ -3,6 +3,10 @@
 ## [GitHub](https://github.com/shiow620412/SGO-Interface-Optimization)  
 ## 有任何問題或建議 歡迎找我提出 DC:Wind#2131
 
+* Ver 1.30.1
+  
+  * 調整-裝備損壞超級提示在點擊戰鬥或趕路後會消失
+  
 * Ver 1.30.0
   
   * 新增設定-裝備損壞超級提示！！！！！！！！！
