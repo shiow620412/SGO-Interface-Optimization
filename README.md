@@ -3,6 +3,11 @@
 ## [GitHub](https://github.com/shiow620412/SGO-Interface-Optimization)  
 ## 有任何問題或建議 歡迎找我提出 DC:Wind#2131
 
+* Ver 1.31.0
+  
+  * 新增設定-SGO物品過濾器
+  * [SGO物品過濾器Editor](https://sgo-filter.wind-tech.tw/)
+  
 * Ver 1.30.1
   
   * 調整-裝備損壞超級提示在點擊戰鬥或趕路後會消失

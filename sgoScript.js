@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.30.1
+// @version      1.31.0
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,7 +13,7 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.30.1"
+    const VERSION = "1.31.0"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const FORGE_STORAGE_NAME = "forgeLog";
     const DEFAULT_SETTINGS = {
@@ -44,6 +44,7 @@
             RED_BACKBROUND_WHEN_EQUIPMENT_BROKEN: false,
             EXP_BAR_FILL_BACKGROUND_IMAGE_URL: "",
             BACKGROUND_IMAGE_URL: "",
+            ITEM_FILTER_ENCODE: "",
         },
         MARKET: {
             WATCH_LIST: [],
@@ -51,7 +52,7 @@
         },
         recipe: {}
     }
-    const FORGE_LOG = loadForgeLog();
+    let FORGE_LOG = loadForgeLog();
 
     let SETTINGS = loadSettings();
     const qualityJson = {
@@ -70,7 +71,7 @@
         垃圾般: [0.55, 1.06],
         屎一般: [0.4, 1.1],
     };
-    const GLOBAL_HIGHTLIGHT_ROW = {
+    const GLOBAL_HIGHLIGHT_ROW = {
         equipments: [],
         mines: [],
         items: []
@@ -128,7 +129,7 @@
             }
         },
         "/hunt": () => {
-            let currentZoneLevel;
+            let currentZoneLevel, filter;
             bindEvent("/hunt", () => {
                 // const buttons = [
                 //     document.querySelector("button.chakra-tabs__tab[data-index='0']"),
@@ -202,27 +203,34 @@
                             data.messages.splice(index+1, 0, msg)
                         }
 
-                        if(data.messages.find(msg => RegExp(`損壞了$`).test(msg.m)) && getSettingByKey("GENERAL.RED_BACKBROUND_WHEN_EQUIPMENT_BROKEN")){
+                        // if(data.messages.find(msg => RegExp(`損壞了$`).test(msg.m)) && getSettingByKey("GENERAL.RED_BACKBROUND_WHEN_EQUIPMENT_BROKEN")){
+                        //     document.querySelector("#__next").style.backgroundColor = "var(--chakra-colors-red-500)";
+                        // }else{
+                        //     document.querySelector("#__next").style.backgroundColor = "";                            
+                        // }
+                        let findEquipmentBroken = false;
+                        data.messages.forEach(message => {
+                            if(/損壞了$/.test(message.m)){
+                                findEquipmentBroken = true;
+                            }
+
+                            if(/獲得了.*/.test(message.m)){
+                                const itemName = message.m.replace(/.*獲得了/, "").replace(/\ \×\ [0-9]+/, "")
+                                
+                                itemApplyFilter(itemName, {
+                                    playSound: true
+                                })
+                            }
+                        });
+
+                        if(findEquipmentBroken && getSettingByKey("GENERAL.RED_BACKBROUND_WHEN_EQUIPMENT_BROKEN")){
                             document.querySelector("#__next").style.backgroundColor = "var(--chakra-colors-red-500)";
                         }else{
                             document.querySelector("#__next").style.backgroundColor = "";                            
                         }
-                        
                     });
 
-                    // subscribeApi("profile", (data) => {
-                    //     if(currentZoneLevel && data.huntStage > currentZoneLevel){
 
-                    //     }
-                    // });
-
-                    // subscribeApi("team", (data) => {
-                    //     if(!data.members) return;
-                    //     const apiTime = new Date().getTime();
-                    //     const firstHuntReport = JSON.parse(localStorage.huntReports)[0];
-                    //     if(apiTime - firstHuntReport > 10) return;
-
-                    // });
                 }
             });
             function getCurrentZoneLevel(){
@@ -242,7 +250,7 @@
                 input.onchange = () => {
                     const name = input.value;
                     document.querySelectorAll("[tabindex='0'] > .chakra-container > .css-0 > div > div").forEach(row => {
-                       checkPlayerName(row, name);
+                        checkPlayerName(row, name);
                     });
                 };
                 playerListContainer.querySelector("p").after(div);
@@ -277,6 +285,89 @@
                     // if(button.textContent === "清空記錄") button.style.marginLeft = "var(--chakra-space-2)";
                 });
 
+            }
+            // itemApplyFilter("123", {highlight: true})
+            function itemApplyFilter(itemName, config) {
+                // const filter = [
+                //     {
+                //         //秘境王 BOSS素材
+                //         color: "#FF95CA",
+                //         sound: "https://cdn.discordapp.com/attachments/1087612859569152040/1088766594240499773/102.mp3",
+                //         volume: 0.03,
+                //         items: ["超級綠水靈珠","巴洛古的指甲","巴洛古之眼","超巨大蘑菇王傘","巨大道符","狒狒之魂","舍利子","青釭","吸血魔獸爪","吸血魔獸牙","究極吸血魔獸爪","究極吸血魔獸牙","究極吸血魔獸翅膀","貓毛"]
+                //     },
+                //     {
+                //         //高級狩獵素材
+                //         color: "#ffAA11",
+                //         sound: "https://cdn.discordapp.com/attachments/1087612859569152040/1088766593921720440/100.mp3",
+                //         volume: 0.03,
+                //         items: ["綠水靈珠","大奶罐尾巴","滑菇黏液","豹子膽","金蠍尾","帕祖祖的尾巴","愛心","妖尾","米老鼠耳朵","靈魂","猩猩毛","","","","","","","","","","","","","",""]
+                //     },
+                //     {
+                //         //王 或 T0技能書     提供複製:  ,"技能書："
+                //         color: "#fbfbfb",
+                //         sound: "https://cdn.discordapp.com/attachments/1087612859569152040/1088743889176891462/101.mp3",
+                //         volume: 0.03,
+                //         items: ["特殊技能：雙持","技能書：鎖條鎖縛","技能書：赤火炮","技能書：亂拳","技能書：蜂鳴八度","技能書：雷霆天降","技能書：十字格檔","技能書：雙重扇形斬","技能書：巨棒外交","技能書：暴風雨","技能書：瞬間移動","技能書：魔法護盾","技能書：退魔擊","技能書：除魔經","技能書：太鼓達人","技能書：旋風衝鋒龍捲風","技能書：瘋狗流刀法","技能書：金衝崩","技能書：造山運動","技能書：汰選斬擊","技能書：刀背打","技能書：銀色旋風","技能書：無雙","技能書：七進七出","技能書：行刑式槍決","技能書：高速移動"]
+                //     },
+                //     {
+                //         //T1技能書
+                //         color: "#E49EE6",
+                //         sound: "",
+                //         volume: 0.03,
+                //         items: ["技能書：運氣調息","技能書：擊劍術","技能書：短刃","技能書：隱身術","技能書：星氣擊","技能書：下級不死族召喚","技能書：土石流","技能書：圓","技能書：尼加拉大瀑布","技能書：伊瓜蘇瀑布","技能書：維多利亞瀑布","技能書：反衝","技能書：三方切","技能書：太刀垂直四方斬","技能書：附魔強化","技能書：槍連擊","技能書：越戰越勇"]
+                //     },
+                //     {
+                //         //神聖的
+                //         color: "#ffff00",
+                //         sound: "https://cdn.discordapp.com/attachments/1087612859569152040/1088767142742196315/103.mp3",
+                //         volume: 0.03,
+                //         items: ["S級兔皮","轉移水晶"]
+                //     },
+                //     {
+                //         //自訂
+                //         color: "",
+                //         sound: "",
+                //         volume: 0.03,
+                //         items: ["","",""]
+                //     },
+                //     {
+                //         //自訂
+                //         color: "",
+                //         sound: "",
+                //         volume: 0.03,
+                //         items: ["","",""]
+                //     },
+                //     {
+                //         //自訂
+                //         color: "",
+                //         sound: "",
+                //         volume: 0.03,
+                //         items: ["","",""]
+                //     },
+                // ]
+                if(!Array.isArray(filter)) {
+                    const itemFilterEncode = getSettingByKey("GENERAL.ITEM_FILTER_ENCODE")        
+                    try{
+                        filter = JSON.parse(decodeURIComponent(atob(itemFilterEncode)));
+                    }catch(e){
+                        // console.error("parse error", e);
+                        filter = [];
+                    }
+                    
+                }
+
+                filter.forEach(filter => {
+                    if(filter.items.includes(itemName)){
+                        if(config.highlight) config.dom.style.color = filter.color
+                        if(config.playSound) {
+                            const audio = new Audio(filter.sound);
+                        
+                            audio.volume = filter.volume;
+                            audio.play().catch((err) => console.error(err));
+                        }
+                    }
+                });
             }
 
             function beautifyHuntLog() {
@@ -398,6 +489,8 @@
                                         }
                                     }
                                 });
+
+                                //武器損壞
                                 if(equipmentBroken) {
                                     informationDiv.insertBefore(line, informationDiv.firstChild);                                    
                                 }
@@ -405,9 +498,19 @@
                                     informationDiv.appendChild(line);
                                 }
 
+                                //爬層提示
                                 if(/^爬到了(.*)/.test(line.innerText)){
                                     line.style.color = getSettingByKey("COLOR.ZONE_LEVEL");
                                     informationDiv.insertBefore(line, informationDiv.firstChild);
+                                }
+
+                                if(/獲得了.*/.test(line.innerText)){
+                                    const itemName = line.innerText.replace(/.*獲得了/, "").replace(/\ \×\ [0-9]+/, "")
+                                    
+                                    itemApplyFilter(itemName, {
+                                        highlight: true,
+                                        dom: line
+                                    })
                                 }
                             }
                         });
@@ -558,10 +661,10 @@
                     }else if(location.pathname === "/market"){
 
                         const tbody = table.querySelector("tbody");
-                        function hightlightRow(){
+                        function highlightRow(){
                             const rows = tbody.querySelectorAll("[role=row]");
                             rows.forEach(row => { row.style.border = ""; });
-                            GLOBAL_HIGHTLIGHT_ROW[type].forEach(rowIndex => {
+                            GLOBAL_HIGHLIGHT_ROW[type].forEach(rowIndex => {
                                 if(rows.length > 0){
                                     // console.log(tbody.childNodes, rowIndex, tbody.childNodes[rowIndex])
                                     try{
@@ -572,12 +675,12 @@
                                 }
                             });
                         }
-                        const observer = new MutationObserver(hightlightRow);
+                        const observer = new MutationObserver(highlightRow);
                         // tbody.firstChild.remove();
                         observer.observe(tbody, {subtree: false, childList:true })
                         observers.push(observer);
                         tbody.appendChild(document.createElement("tr"));
-                        // hightlightRow();
+                        // highlightRow();
                     }
                     
 
@@ -751,6 +854,7 @@
                 forgeTime.setMilliseconds(0);
                 const base64 =  btoa(encodeURIComponent(`${forgeTime.getTime()},${equipmentName},${forger}`))
                 let forgeMaterial = "";
+
                 if(FORGE_LOG[base64]) {
                     forgeMaterial = `鍛造材料:${FORGE_LOG[base64]}\n`;
                 }
@@ -820,6 +924,7 @@
                 buyButton.before(watchButton);
                 watchButton.before(blacklistButton);
             }
+           
         },
         "/market"() {
             this["/items"]();
@@ -855,8 +960,9 @@
                             time.setSeconds(0);
                             time.setMilliseconds(0);
                             const base64 = btoa(encodeURIComponent(`${time.getTime()},${equipmentName},${data.profile.nickname}`))
+
                             FORGE_LOG[base64] = selectedMaterials.join(",")
-                            saveForgeLog()
+                            saveForgeLog(FORGE_LOG)
                         });
                     }
                 }
@@ -1104,7 +1210,7 @@
         items: [
             (data) => {
                 GLOBAL_EQUIPMENTS = structuredClone(data.equipments);
-
+                FORGE_LOG = loadForgeLog();
                 // const filter = ["單手劍"]
                 // data.equipments = data.equipments.filter(equipment => !filter.includes(equipment.typeName))
             },
@@ -1142,7 +1248,7 @@
                 triggerEventHook(apiUrl[0]);
 
                 const category = regexGetValue("trades\\?category=([a-z]+)", apiUrl[0])[0];
-                GLOBAL_HIGHTLIGHT_ROW[category].length = 0;
+                GLOBAL_HIGHLIGHT_ROW[category].length = 0;
                 if(!getSettingByKey("GENERAL.DISABLE_MARKET_FUNCTION")){
 
                     const blackList = getSettingByKey("MARKET.BLACK_LIST");
@@ -1153,7 +1259,7 @@
                     for(let i = 0; i < apiData[apiUrl[0]].trades.length; i++){
                         const trade = apiData[apiUrl[0]].trades[i];
                         if(watchList.includes(trade.sellerName)){
-                            GLOBAL_HIGHTLIGHT_ROW[category].push(i);
+                            GLOBAL_HIGHLIGHT_ROW[category].push(i);
                         }
                     }
                 }
@@ -1172,8 +1278,15 @@
 
                     if(FORGE_LOG[base64]){
                         delete FORGE_LOG[base64];
-                        saveForgeLog();
+                        saveForgeLog(FORGE_LOG);
                     }
+                }
+            }else if(apiUrl[0].match(".*\/[0-9]+\/sell")){
+                try{
+                    
+            
+                }catch(e){
+                    console.error(e);
                 }
             }
             // else if(location.pathname === "/hunt" && apiUrl[0] === "profile" && getSettingByKey("GENERAL.HUNT_STATUS_PERCENT")){
@@ -1410,6 +1523,12 @@
                         type: "input",
                         label: "自訂背景圖片",
                         bindSetting: "GENERAL.BACKGROUND_IMAGE_URL"
+                    },
+                    {
+                        id: "item-filter-encode",
+                        type: "input",
+                        label: "物品過濾器編碼",
+                        bindSetting: "GENERAL.ITEM_FILTER_ENCODE"
                     }
                 ]
             },
@@ -1699,13 +1818,15 @@
         if (localStorage[FORGE_STORAGE_NAME]) {
             try{
                 return JSON.parse(localStorage[FORGE_STORAGE_NAME]);
-            }catch(e){}
+            }catch(e){
+                console.error("load forge log failed", e)
+            }
         }
         return {};
     }
 
-    function saveForgeLog(){
-        localStorage[FORGE_STORAGE_NAME] = JSON.stringify(FORGE_LOG);
+    function saveForgeLog(data){
+        localStorage[FORGE_STORAGE_NAME] = JSON.stringify(data);
     }
 
 
