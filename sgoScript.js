@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.31.0
+// @version      1.31.1
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,7 +13,7 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.31.0"
+    const VERSION = "1.31.1"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const FORGE_STORAGE_NAME = "forgeLog";
     const DEFAULT_SETTINGS = {
@@ -288,64 +288,6 @@
             }
             // itemApplyFilter("123", {highlight: true})
             function itemApplyFilter(itemName, config) {
-                // const filter = [
-                //     {
-                //         //秘境王 BOSS素材
-                //         color: "#FF95CA",
-                //         sound: "https://cdn.discordapp.com/attachments/1087612859569152040/1088766594240499773/102.mp3",
-                //         volume: 0.03,
-                //         items: ["超級綠水靈珠","巴洛古的指甲","巴洛古之眼","超巨大蘑菇王傘","巨大道符","狒狒之魂","舍利子","青釭","吸血魔獸爪","吸血魔獸牙","究極吸血魔獸爪","究極吸血魔獸牙","究極吸血魔獸翅膀","貓毛"]
-                //     },
-                //     {
-                //         //高級狩獵素材
-                //         color: "#ffAA11",
-                //         sound: "https://cdn.discordapp.com/attachments/1087612859569152040/1088766593921720440/100.mp3",
-                //         volume: 0.03,
-                //         items: ["綠水靈珠","大奶罐尾巴","滑菇黏液","豹子膽","金蠍尾","帕祖祖的尾巴","愛心","妖尾","米老鼠耳朵","靈魂","猩猩毛","","","","","","","","","","","","","",""]
-                //     },
-                //     {
-                //         //王 或 T0技能書     提供複製:  ,"技能書："
-                //         color: "#fbfbfb",
-                //         sound: "https://cdn.discordapp.com/attachments/1087612859569152040/1088743889176891462/101.mp3",
-                //         volume: 0.03,
-                //         items: ["特殊技能：雙持","技能書：鎖條鎖縛","技能書：赤火炮","技能書：亂拳","技能書：蜂鳴八度","技能書：雷霆天降","技能書：十字格檔","技能書：雙重扇形斬","技能書：巨棒外交","技能書：暴風雨","技能書：瞬間移動","技能書：魔法護盾","技能書：退魔擊","技能書：除魔經","技能書：太鼓達人","技能書：旋風衝鋒龍捲風","技能書：瘋狗流刀法","技能書：金衝崩","技能書：造山運動","技能書：汰選斬擊","技能書：刀背打","技能書：銀色旋風","技能書：無雙","技能書：七進七出","技能書：行刑式槍決","技能書：高速移動"]
-                //     },
-                //     {
-                //         //T1技能書
-                //         color: "#E49EE6",
-                //         sound: "",
-                //         volume: 0.03,
-                //         items: ["技能書：運氣調息","技能書：擊劍術","技能書：短刃","技能書：隱身術","技能書：星氣擊","技能書：下級不死族召喚","技能書：土石流","技能書：圓","技能書：尼加拉大瀑布","技能書：伊瓜蘇瀑布","技能書：維多利亞瀑布","技能書：反衝","技能書：三方切","技能書：太刀垂直四方斬","技能書：附魔強化","技能書：槍連擊","技能書：越戰越勇"]
-                //     },
-                //     {
-                //         //神聖的
-                //         color: "#ffff00",
-                //         sound: "https://cdn.discordapp.com/attachments/1087612859569152040/1088767142742196315/103.mp3",
-                //         volume: 0.03,
-                //         items: ["S級兔皮","轉移水晶"]
-                //     },
-                //     {
-                //         //自訂
-                //         color: "",
-                //         sound: "",
-                //         volume: 0.03,
-                //         items: ["","",""]
-                //     },
-                //     {
-                //         //自訂
-                //         color: "",
-                //         sound: "",
-                //         volume: 0.03,
-                //         items: ["","",""]
-                //     },
-                //     {
-                //         //自訂
-                //         color: "",
-                //         sound: "",
-                //         volume: 0.03,
-                //         items: ["","",""]
-                //     },
-                // ]
                 if(!Array.isArray(filter)) {
                     const itemFilterEncode = getSettingByKey("GENERAL.ITEM_FILTER_ENCODE")        
                     try{
@@ -1410,7 +1352,7 @@
         `
         const style = document.createElement("style");
         //scss
-        style.innerText = `*{box-sizing:border-box}.wrapper{display:flex;align-items:center;justify-content:center;background-color:rgba(15,19,26,.8);height:100vh;position:fixed;width:100%;left:0;top:0;overflow:auto;z-index:9999}.header{display:flex;justify-content:space-between;margin:1rem 1rem 0 1rem}.header button{height:100%}.header h1{color:#fff}.header #reset-settings-btn{border:1px solid #3c3f43;margin-right:1rem}.content{display:flex;margin:0 1rem 1rem 1rem;flex-direction:column}.content hr{width:100%}.panel{position:relative;width:100%;display:flex;flex-direction:column}.panel input[type=checkbox]{margin:.5rem}.panel input[type=text]{background-color:#1a1d24;background-image:none;border:1px solid #3c3f43;border-radius:6px;color:#e9ebf0;display:block;font-size:14px;line-height:1.42857143;padding:7px 11px;transition:border-color .3s ease-in-out;width:100px}.panel+.panel::before{border-top:1px solid #3c3f43;content:"";left:20px;position:absolute;right:20px;top:0}.panel-header{width:100%;padding:20px}.panel-header span{color:#fff;font-size:16px;line-height:1.25}.panel-body{padding:0 20px 20px 20px}.panel-body .row{margin-top:1rem;display:flex;align-items:center}.panel-body .row label{color:#a4a9b3;margin-right:1rem}.panel-body .row input{margin-right:1rem}.panel-body .row.table{flex-direction:column;align-items:flex-start}.grid{margin-top:10px;width:100%;color:#a4a9b3;background-color:#1a1d24}.grid div{border-bottom:1px solid #292d33;width:100%;height:40px;padding:10px}.grid .grid-row{display:flex;align-items:center}.grid .grid-row:hover{background-color:#3c3f43}.grid .grid-row button{font-size:14px;border:none;background-color:rgba(0,0,0,0);color:#9146ff;margin-left:auto}.grid .grid-row button:hover{cursor:pointer}.description{margin:0px;color:#a4a9b3;line-height:1.5;font-size:8px}.dialog{width:800px;height:500px;left:0;top:0;overflow:auto;z-index:9999;background-color:#292d33;border-radius:6px;box-shadow:0 4px 4px rgba(0,0,0,.12),0 0 10px rgba(0,0,0,.06)}#open-dialog-btn{position:-webkit-sticky;position:sticky;left:0;bottom:20px;margin-right:1rem;z-index:9998;color:#7d7d7d;background-color:rgba(0,0,0,0);border:none}#open-dialog-btn:hover{color:#fff}[hidden]{display:none}#exp-bar{position:fixed;bottom:0px;width:100%;height:24px}#exp-bar-fill{position:fixed;bottom:0px;left:0px;height:24px}.exp-container{display:flex;justify-content:flex-end;position:fixed;width:100%;bottom:0px}.quick-filter-container{display:flex;margin-bottom:.5rem;align-items:center;-webkit-box-align:center}.quick-filter-container div{width:18px;height:18px;margin-right:var(--chakra-space-3);border-radius:50%;background:var(--chakra-colors-transparent);border-width:2px;border-style:solid;-o-border-image:initial;border-image:initial;cursor:pointer}.quick-filter-container .circle-red{border-color:var(--chakra-colors-red-500)}.quick-filter-container .circle-red:hover{background-color:var(--chakra-colors-red-300)}.quick-filter-container .circle-blue{border-color:var(--chakra-colors-blue-500)}.quick-filter-container .circle-blue:hover{background-color:var(--chakra-colors-blue-300)}.quick-filter-container .circle-cyan{border-color:var(--chakra-colors-cyan-500)}.quick-filter-container .circle-cyan:hover{background-color:var(--chakra-colors-cyan-300)}.quick-filter-container .circle-green{border-color:var(--chakra-colors-green-500)}.quick-filter-container .circle-green:hover{background-color:var(--chakra-colors-green-300)}.quick-filter-container .circle-teal{border-color:var(--chakra-colors-teal-500)}.quick-filter-container .circle-teal:hover{background-color:var(--chakra-colors-teal-300)}.quick-filter-container .circle-orange{border-color:var(--chakra-colors-orange-500)}.quick-filter-container .circle-orange:hover{background-color:var(--chakra-colors-orange-300)}.quick-filter-container .circle-yellow{border-color:var(--chakra-colors-yellow-500)}.quick-filter-container .circle-yellow:hover{background-color:var(--chakra-colors-yellow-300)}.quick-filter-container .circle-pink{border-color:var(--chakra-colors-pink-500)}.quick-filter-container .circle-pink:hover{background-color:var(--chakra-colors-pink-300)}.quick-filter-container .circle-purple{border-color:var(--chakra-colors-purple-500)}.quick-filter-container .circle-purple:hover{background-color:var(--chakra-colors-purple-300)}.quick-filter-container .circle-gray{border-color:var(--chakra-colors-gray-500)}.quick-filter-container .circle-gray:hover{background-color:var(--chakra-colors-gray-300)}`;
+        style.innerText = `*{box-sizing:border-box}.wrapper{display:flex;align-items:center;justify-content:center;background-color:rgba(15,19,26,.8);height:100vh;position:fixed;width:100%;left:0;top:0;overflow:auto;z-index:9999}.header{display:flex;justify-content:space-between;margin:1rem 1rem 0 1rem}.header button{height:100%}.header h1{color:#fff}.header #reset-settings-btn{border:1px solid #3c3f43;margin-right:1rem}.content{display:flex;margin:0 1rem 1rem 1rem;flex-direction:column}.content hr{width:100%}.panel{position:relative;width:100%;display:flex;flex-direction:column}.panel input[type=checkbox]{margin:.5rem}.panel input[type=text]{background-color:#1a1d24;background-image:none;border:1px solid #3c3f43;border-radius:6px;color:#e9ebf0;display:block;font-size:14px;line-height:1.42857143;padding:7px 11px;transition:border-color .3s ease-in-out;width:100px}.panel+.panel::before{border-top:1px solid #3c3f43;content:"";left:20px;position:absolute;right:20px;top:0}.panel-header{width:100%;padding:20px}.panel-header span{color:#fff;font-size:16px;line-height:1.25}.panel-body{padding:0 20px 20px 20px}.panel-body .row{margin-top:1rem;display:flex;align-items:center}.panel-body .row label{color:#a4a9b3;margin-right:1rem}.panel-body .row input{margin-right:1rem}.panel-body .row a{color:#a4a9b3;margin-right:1rem;text-decoration:underline}.panel-body .row a:hover{background-color:#3c3f43}.panel-body .row.table{flex-direction:column;align-items:flex-start}.grid{margin-top:10px;width:100%;color:#a4a9b3;background-color:#1a1d24}.grid div{border-bottom:1px solid #292d33;width:100%;height:40px;padding:10px}.grid .grid-row{display:flex;align-items:center}.grid .grid-row:hover{background-color:#3c3f43}.grid .grid-row button{font-size:14px;border:none;background-color:rgba(0,0,0,0);color:#9146ff;margin-left:auto}.grid .grid-row button:hover{cursor:pointer}.description{margin:0px;color:#a4a9b3;line-height:1.5;font-size:8px}.dialog{width:800px;height:500px;left:0;top:0;overflow:auto;z-index:9999;background-color:#292d33;border-radius:6px;box-shadow:0 4px 4px rgba(0,0,0,.12),0 0 10px rgba(0,0,0,.06)}#open-dialog-btn{position:-webkit-sticky;position:sticky;left:0;bottom:20px;margin-right:1rem;z-index:9998;color:#7d7d7d;background-color:rgba(0,0,0,0);border:none}#open-dialog-btn:hover{color:#fff}[hidden]{display:none}#exp-bar{position:fixed;bottom:0px;width:100%;height:24px}#exp-bar-fill{position:fixed;bottom:0px;left:0px;height:24px}.exp-container{display:flex;justify-content:flex-end;position:fixed;width:100%;bottom:0px}.quick-filter-container{display:flex;margin-bottom:.5rem;align-items:center;-webkit-box-align:center}.quick-filter-container div{width:18px;height:18px;margin-right:var(--chakra-space-3);border-radius:50%;background:var(--chakra-colors-transparent);border-width:2px;border-style:solid;-o-border-image:initial;border-image:initial;cursor:pointer}.quick-filter-container .circle-red{border-color:var(--chakra-colors-red-500)}.quick-filter-container .circle-red:hover{background-color:var(--chakra-colors-red-300)}.quick-filter-container .circle-blue{border-color:var(--chakra-colors-blue-500)}.quick-filter-container .circle-blue:hover{background-color:var(--chakra-colors-blue-300)}.quick-filter-container .circle-cyan{border-color:var(--chakra-colors-cyan-500)}.quick-filter-container .circle-cyan:hover{background-color:var(--chakra-colors-cyan-300)}.quick-filter-container .circle-green{border-color:var(--chakra-colors-green-500)}.quick-filter-container .circle-green:hover{background-color:var(--chakra-colors-green-300)}.quick-filter-container .circle-teal{border-color:var(--chakra-colors-teal-500)}.quick-filter-container .circle-teal:hover{background-color:var(--chakra-colors-teal-300)}.quick-filter-container .circle-orange{border-color:var(--chakra-colors-orange-500)}.quick-filter-container .circle-orange:hover{background-color:var(--chakra-colors-orange-300)}.quick-filter-container .circle-yellow{border-color:var(--chakra-colors-yellow-500)}.quick-filter-container .circle-yellow:hover{background-color:var(--chakra-colors-yellow-300)}.quick-filter-container .circle-pink{border-color:var(--chakra-colors-pink-500)}.quick-filter-container .circle-pink:hover{background-color:var(--chakra-colors-pink-300)}.quick-filter-container .circle-purple{border-color:var(--chakra-colors-purple-500)}.quick-filter-container .circle-purple:hover{background-color:var(--chakra-colors-purple-300)}.quick-filter-container .circle-gray{border-color:var(--chakra-colors-gray-500)}.quick-filter-container .circle-gray:hover{background-color:var(--chakra-colors-gray-300)}`;
         // document.querySelector("#open-dialog-btn").onclick = () => {createSettingUI(); registerSettingUIEvent();}
         openDialogBtn.onclick = () => {createSettingUI(); registerSettingUIEvent();}
         document.body.appendChild(style);
@@ -1529,6 +1471,11 @@
                         type: "input",
                         label: "物品過濾器編碼",
                         bindSetting: "GENERAL.ITEM_FILTER_ENCODE"
+                    },
+                    {
+                        type: "a",
+                        label: "SGO-物品過濾器-Editor",
+                        link: "https://sgo-filter.wind-tech.tw/"
                     }
                 ]
             },
@@ -1728,6 +1675,11 @@
                             <div class="grid-row-header">${rowData.header}</div>
                             ${gridRowHTML}
                         </div>`
+                },
+                a: () => {
+                    rowDiv.innerHTML = `
+                        <a href="${rowData.link}" target="_blank" rel="noopener noreferrer">${rowData.label}</a>
+                    `
                 }
             }
             type[rowData.type]();

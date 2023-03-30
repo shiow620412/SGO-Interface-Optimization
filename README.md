@@ -3,6 +3,10 @@
 ## [GitHub](https://github.com/shiow620412/SGO-Interface-Optimization)  
 ## 有任何問題或建議 歡迎找我提出 DC:Wind#2131
 
+* Ver 1.31.1
+  
+  * 調整-SGO物品過濾器下方新增編輯器連結
+  
 * Ver 1.31.0
   
   * 新增設定-SGO物品過濾器
