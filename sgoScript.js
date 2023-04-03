@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.31.1
+// @version      1.32.0
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,7 +13,7 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.31.1"
+    const VERSION = "1.32.0"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const FORGE_STORAGE_NAME = "forgeLog";
     const DEFAULT_SETTINGS = {
@@ -154,85 +154,89 @@
                         registerPlayerListObserverAndCreateSearchPlayerUI();
                     }
                     
-                    subscribeApi("hunt", (data) => {
-                        if(getSettingByKey("GENERAL.HUNT_STATUS_PERCENT")){
-                            data.profile.fullHp += ` (${Math.floor(data.profile.hp / data.profile.fullHp * 100)}%)`
-                            data.profile.fullSp += ` (${Math.floor(data.profile.sp / data.profile.fullSp * 100)}%)`
-                        }
-
-                        if(currentZoneLevel === undefined) currentZoneLevel = data.profile.huntStage
-                        if(data.profile.huntStage > currentZoneLevel){
-                            data.messages.push({
-                                m: `爬到了${data.profile.zoneName} ${data.profile.huntStage}`,
-                                s: "info"
-                            })
-                        }
-                        currentZoneLevel = data.profile.huntStage;
-
-                        data.meta.teamA.forEach(player => {
-                            const {name, hp} = player;
-                            const index = data.messages.findIndex(msg => msg.m.match(`^${name}還有 [0-9]+ 點HP`));
-                            if(!!~index){
-                                const huntHp = Number(regexGetValue(`${name}還有 ([0-9]+) 點HP`, data.messages[index].m)[0])
-                                if(hp - huntHp !== 0){
-                                    if(hp - huntHp > 0){
-                                        data.messages[index].m += `(-${hp - huntHp})`
-                                    }else{
-                                        data.messages[index].m += `(+${huntHp - hp})`
-                                    }
-                                }
-                            }
-                        })
-                        const nickname = data.profile.nickname
-                        const metaData = data.meta.teamA.find(player => player.name === nickname);
-                        const index = data.messages.findIndex(msg => msg.m.match(`^${nickname}還有 [0-9]+ 點HP`));
-                        if(!!~index){
-                            // if(metaData.hp - data.profile.hp !== 0){
-                            //     if(metaData.hp - data.profile.hp > 0){
-                            //         data.messages[index].m += `(-${metaData.hp - data.profile.hp})`
-                            //     }else{
-                            //         data.messages[index].m += `(+${data.profile.hp - metaData.hp})`
-                            //     }
-                            // }
-                            const msg = {m: "", s: "subInfo"}
-                            if( metaData.sp - data.profile.sp > 0){
-                                msg.m = `${nickname}還有 ${data.profile.sp} 點體力(-${metaData.sp - data.profile.sp })`
-                            }else{
-                                msg.m = `${nickname}還有 ${data.profile.sp} 點體力(+${data.profile.sp - metaData.sp})`
-                            }
-                            data.messages.splice(index+1, 0, msg)
-                        }
-
-                        // if(data.messages.find(msg => RegExp(`損壞了$`).test(msg.m)) && getSettingByKey("GENERAL.RED_BACKBROUND_WHEN_EQUIPMENT_BROKEN")){
-                        //     document.querySelector("#__next").style.backgroundColor = "var(--chakra-colors-red-500)";
-                        // }else{
-                        //     document.querySelector("#__next").style.backgroundColor = "";                            
-                        // }
-                        let findEquipmentBroken = false;
-                        data.messages.forEach(message => {
-                            if(/損壞了$/.test(message.m)){
-                                findEquipmentBroken = true;
-                            }
-
-                            if(/獲得了.*/.test(message.m)){
-                                const itemName = message.m.replace(/.*獲得了/, "").replace(/\ \×\ [0-9]+/, "")
-                                
-                                itemApplyFilter(itemName, {
-                                    playSound: true
-                                })
-                            }
-                        });
-
-                        if(findEquipmentBroken && getSettingByKey("GENERAL.RED_BACKBROUND_WHEN_EQUIPMENT_BROKEN")){
-                            document.querySelector("#__next").style.backgroundColor = "var(--chakra-colors-red-500)";
-                        }else{
-                            document.querySelector("#__next").style.backgroundColor = "";                            
-                        }
-                    });
+                    subscribeApi("hunt", apiEvent);
+                    subscribeApi("boss", apiEvent);
 
 
                 }
             });
+
+            function apiEvent(data) {
+                if(getSettingByKey("GENERAL.HUNT_STATUS_PERCENT")){
+                    data.profile.fullHp += ` (${Math.floor(data.profile.hp / data.profile.fullHp * 100)}%)`
+                    data.profile.fullSp += ` (${Math.floor(data.profile.sp / data.profile.fullSp * 100)}%)`
+                }
+
+                if(currentZoneLevel === undefined) currentZoneLevel = data.profile.huntStage
+                if(data.profile.huntStage > currentZoneLevel){
+                    data.messages.push({
+                        m: `爬到了${data.profile.zoneName} ${data.profile.huntStage}`,
+                        s: "info"
+                    })
+                }
+                currentZoneLevel = data.profile.huntStage;
+
+                data.meta.teamA.forEach(player => {
+                    const {name, hp} = player;
+                    const index = data.messages.findIndex(msg => msg.m.match(`^${name}還有 [0-9]+ 點HP`));
+                    if(!!~index){
+                        const huntHp = Number(regexGetValue(`${name}還有 ([0-9]+) 點HP`, data.messages[index].m)[0])
+                        if(hp - huntHp !== 0){
+                            if(hp - huntHp > 0){
+                                data.messages[index].m += `(-${hp - huntHp})`
+                            }else{
+                                data.messages[index].m += `(+${huntHp - hp})`
+                            }
+                        }
+                    }
+                })
+                const nickname = data.profile.nickname
+                const metaData = data.meta.teamA.find(player => player.name === nickname);
+                const index = data.messages.findIndex(msg => msg.m.match(`^${nickname}還有 [0-9]+ 點HP`));
+                if(!!~index){
+                    // if(metaData.hp - data.profile.hp !== 0){
+                    //     if(metaData.hp - data.profile.hp > 0){
+                    //         data.messages[index].m += `(-${metaData.hp - data.profile.hp})`
+                    //     }else{
+                    //         data.messages[index].m += `(+${data.profile.hp - metaData.hp})`
+                    //     }
+                    // }
+                    const msg = {m: "", s: "subInfo"}
+                    if( metaData.sp - data.profile.sp > 0){
+                        msg.m = `${nickname}還有 ${data.profile.sp} 點體力(-${metaData.sp - data.profile.sp })`
+                    }else{
+                        msg.m = `${nickname}還有 ${data.profile.sp} 點體力(+${data.profile.sp - metaData.sp})`
+                    }
+                    data.messages.splice(index+1, 0, msg)
+                }
+
+                // if(data.messages.find(msg => RegExp(`損壞了$`).test(msg.m)) && getSettingByKey("GENERAL.RED_BACKBROUND_WHEN_EQUIPMENT_BROKEN")){
+                //     document.querySelector("#__next").style.backgroundColor = "var(--chakra-colors-red-500)";
+                // }else{
+                //     document.querySelector("#__next").style.backgroundColor = "";                            
+                // }
+                let findEquipmentBroken = false;
+                data.messages.forEach(message => {
+                    if(/損壞了$/.test(message.m)){
+                        findEquipmentBroken = true;
+                    }
+
+                    if(/獲得了.*/.test(message.m)){
+                        const itemName = message.m.replace(/.*獲得了/, "").replace(/\ \×\ [0-9]+/, "")
+                        
+                        itemApplyFilter(itemName, {
+                            playSound: true
+                        })
+                    }
+                });
+
+                if(findEquipmentBroken && getSettingByKey("GENERAL.RED_BACKBROUND_WHEN_EQUIPMENT_BROKEN")){
+                    document.querySelector("#__next").style.backgroundColor = "var(--chakra-colors-red-500)";
+                }else{
+                    document.querySelector("#__next").style.backgroundColor = "";                            
+                }
+            }
+
             function getCurrentZoneLevel(){
                 const currentZone = document.querySelector("[zones]").textContent.split("：")[1].trim();
                 const reglevel = regexGetValue("([0-9]+)", currentZone)
@@ -1352,9 +1356,14 @@
         `
         const style = document.createElement("style");
         //scss
-        style.innerText = `*{box-sizing:border-box}.wrapper{display:flex;align-items:center;justify-content:center;background-color:rgba(15,19,26,.8);height:100vh;position:fixed;width:100%;left:0;top:0;overflow:auto;z-index:9999}.header{display:flex;justify-content:space-between;margin:1rem 1rem 0 1rem}.header button{height:100%}.header h1{color:#fff}.header #reset-settings-btn{border:1px solid #3c3f43;margin-right:1rem}.content{display:flex;margin:0 1rem 1rem 1rem;flex-direction:column}.content hr{width:100%}.panel{position:relative;width:100%;display:flex;flex-direction:column}.panel input[type=checkbox]{margin:.5rem}.panel input[type=text]{background-color:#1a1d24;background-image:none;border:1px solid #3c3f43;border-radius:6px;color:#e9ebf0;display:block;font-size:14px;line-height:1.42857143;padding:7px 11px;transition:border-color .3s ease-in-out;width:100px}.panel+.panel::before{border-top:1px solid #3c3f43;content:"";left:20px;position:absolute;right:20px;top:0}.panel-header{width:100%;padding:20px}.panel-header span{color:#fff;font-size:16px;line-height:1.25}.panel-body{padding:0 20px 20px 20px}.panel-body .row{margin-top:1rem;display:flex;align-items:center}.panel-body .row label{color:#a4a9b3;margin-right:1rem}.panel-body .row input{margin-right:1rem}.panel-body .row a{color:#a4a9b3;margin-right:1rem;text-decoration:underline}.panel-body .row a:hover{background-color:#3c3f43}.panel-body .row.table{flex-direction:column;align-items:flex-start}.grid{margin-top:10px;width:100%;color:#a4a9b3;background-color:#1a1d24}.grid div{border-bottom:1px solid #292d33;width:100%;height:40px;padding:10px}.grid .grid-row{display:flex;align-items:center}.grid .grid-row:hover{background-color:#3c3f43}.grid .grid-row button{font-size:14px;border:none;background-color:rgba(0,0,0,0);color:#9146ff;margin-left:auto}.grid .grid-row button:hover{cursor:pointer}.description{margin:0px;color:#a4a9b3;line-height:1.5;font-size:8px}.dialog{width:800px;height:500px;left:0;top:0;overflow:auto;z-index:9999;background-color:#292d33;border-radius:6px;box-shadow:0 4px 4px rgba(0,0,0,.12),0 0 10px rgba(0,0,0,.06)}#open-dialog-btn{position:-webkit-sticky;position:sticky;left:0;bottom:20px;margin-right:1rem;z-index:9998;color:#7d7d7d;background-color:rgba(0,0,0,0);border:none}#open-dialog-btn:hover{color:#fff}[hidden]{display:none}#exp-bar{position:fixed;bottom:0px;width:100%;height:24px}#exp-bar-fill{position:fixed;bottom:0px;left:0px;height:24px}.exp-container{display:flex;justify-content:flex-end;position:fixed;width:100%;bottom:0px}.quick-filter-container{display:flex;margin-bottom:.5rem;align-items:center;-webkit-box-align:center}.quick-filter-container div{width:18px;height:18px;margin-right:var(--chakra-space-3);border-radius:50%;background:var(--chakra-colors-transparent);border-width:2px;border-style:solid;-o-border-image:initial;border-image:initial;cursor:pointer}.quick-filter-container .circle-red{border-color:var(--chakra-colors-red-500)}.quick-filter-container .circle-red:hover{background-color:var(--chakra-colors-red-300)}.quick-filter-container .circle-blue{border-color:var(--chakra-colors-blue-500)}.quick-filter-container .circle-blue:hover{background-color:var(--chakra-colors-blue-300)}.quick-filter-container .circle-cyan{border-color:var(--chakra-colors-cyan-500)}.quick-filter-container .circle-cyan:hover{background-color:var(--chakra-colors-cyan-300)}.quick-filter-container .circle-green{border-color:var(--chakra-colors-green-500)}.quick-filter-container .circle-green:hover{background-color:var(--chakra-colors-green-300)}.quick-filter-container .circle-teal{border-color:var(--chakra-colors-teal-500)}.quick-filter-container .circle-teal:hover{background-color:var(--chakra-colors-teal-300)}.quick-filter-container .circle-orange{border-color:var(--chakra-colors-orange-500)}.quick-filter-container .circle-orange:hover{background-color:var(--chakra-colors-orange-300)}.quick-filter-container .circle-yellow{border-color:var(--chakra-colors-yellow-500)}.quick-filter-container .circle-yellow:hover{background-color:var(--chakra-colors-yellow-300)}.quick-filter-container .circle-pink{border-color:var(--chakra-colors-pink-500)}.quick-filter-container .circle-pink:hover{background-color:var(--chakra-colors-pink-300)}.quick-filter-container .circle-purple{border-color:var(--chakra-colors-purple-500)}.quick-filter-container .circle-purple:hover{background-color:var(--chakra-colors-purple-300)}.quick-filter-container .circle-gray{border-color:var(--chakra-colors-gray-500)}.quick-filter-container .circle-gray:hover{background-color:var(--chakra-colors-gray-300)}`;
+        style.innerText = `
+        *{box-sizing:border-box}.wrapper{display:flex;align-items:center;justify-content:center;background-color:rgba(15,19,26,.8);height:100vh;position:fixed;width:100%;left:0;top:0;overflow:auto;z-index:9999}.header{display:flex;justify-content:space-between;padding:1rem 1rem 0 1rem;position:absolute;width:calc(100% - 56px);top:0;left:56px;border-bottom:1px solid #3c3f43}.header button{height:100%}.header h1{color:#fff}.header #close-dialog-btn{margin-left:auto}.content-container{padding-top:50px;margin-left:56px;height:100%}.content-container .content{display:flex;margin:0 1rem 1rem 1rem;flex-direction:column;height:100%;overflow-y:scroll}.content-container .content hr{width:100%}.panel{position:relative;width:100%;display:flex;flex-direction:column;display:none;opacity:0}.panel input[type=checkbox]{margin:.5rem}.panel input[type=text]{background-color:#1a1d24;background-image:none;border:1px solid #3c3f43;border-radius:6px;color:#e9ebf0;display:block;font-size:14px;line-height:1.42857143;padding:7px 11px;transition:border-color .3s ease-in-out;width:100px}.panel[expand]{display:block;opacity:1}.panel-header{width:100%;padding:20px}.panel-header span{color:#fff;font-size:16px;line-height:1.25}.panel-body{padding:0 20px 20px 20px}.panel-body .row{margin-top:1rem;display:flex;align-items:center}.panel-body .row label{color:#a4a9b3;margin-right:1rem}.panel-body .row input{margin-right:1rem}.panel-body .row a{color:#a4a9b3;margin-right:1rem;text-decoration:underline}.panel-body .row a:hover{background-color:#3c3f43}.panel-body .row.table{flex-direction:column;align-items:flex-start}.grid{margin-top:10px;width:100%;color:#a4a9b3;background-color:#1a1d24}.grid div{border-bottom:1px solid #292d33;width:100%;height:40px;padding:10px}.grid .grid-row{display:flex;align-items:center}.grid .grid-row:hover{background-color:#3c3f43}.grid .grid-row button{font-size:14px;border:none;background-color:rgba(0,0,0,0);color:#9146ff;margin-left:auto}.grid .grid-row button:hover{cursor:pointer}.description{margin:0px;color:#a4a9b3;line-height:1.5;font-size:8px}.dialog{width:800px;height:500px;position:relative;overflow:auto;z-index:9999;display:flex;background-color:#292d33;border-radius:6px;box-shadow:0 4px 4px rgba(0,0,0,.12),0 0 10px rgba(0,0,0,.06);display:block}.dialog .navbar{height:500px;background-color:#1a1d24;width:56px;position:fixed;display:flex;flex-direction:column}.dialog .navbar button{height:50px}.dialog .navbar button:hover{background-color:#292d33}.dialog .navbar button[active]{background-color:#292d33}.dialog .right-container{margin-left:56px}#open-dialog-btn{position:-webkit-sticky;position:sticky;left:0;bottom:20px;margin-right:1rem;z-index:9998;color:#7d7d7d;background-color:rgba(0,0,0,0);border:none}#open-dialog-btn:hover{color:#fff}[hidden]{display:none}#exp-bar{position:fixed;bottom:0px;width:100%;height:24px}#exp-bar-fill{position:fixed;bottom:0px;left:0px;height:24px}.exp-container{display:flex;justify-content:flex-end;position:fixed;width:100%;bottom:0px}.quick-filter-container{display:flex;margin-bottom:.5rem;align-items:center;-webkit-box-align:center}.quick-filter-container div{width:18px;height:18px;margin-right:var(--chakra-space-3);border-radius:50%;background:var(--chakra-colors-transparent);border-width:2px;border-style:solid;-o-border-image:initial;border-image:initial;cursor:pointer}.quick-filter-container .circle-red{border-color:var(--chakra-colors-red-500)}.quick-filter-container .circle-red:hover{background-color:var(--chakra-colors-red-300)}.quick-filter-container .circle-blue{border-color:var(--chakra-colors-blue-500)}.quick-filter-container .circle-blue:hover{background-color:var(--chakra-colors-blue-300)}.quick-filter-container .circle-cyan{border-color:var(--chakra-colors-cyan-500)}.quick-filter-container .circle-cyan:hover{background-color:var(--chakra-colors-cyan-300)}.quick-filter-container .circle-green{border-color:var(--chakra-colors-green-500)}.quick-filter-container .circle-green:hover{background-color:var(--chakra-colors-green-300)}.quick-filter-container .circle-teal{border-color:var(--chakra-colors-teal-500)}.quick-filter-container .circle-teal:hover{background-color:var(--chakra-colors-teal-300)}.quick-filter-container .circle-orange{border-color:var(--chakra-colors-orange-500)}.quick-filter-container .circle-orange:hover{background-color:var(--chakra-colors-orange-300)}.quick-filter-container .circle-yellow{border-color:var(--chakra-colors-yellow-500)}.quick-filter-container .circle-yellow:hover{background-color:var(--chakra-colors-yellow-300)}.quick-filter-container .circle-pink{border-color:var(--chakra-colors-pink-500)}.quick-filter-container .circle-pink:hover{background-color:var(--chakra-colors-pink-300)}.quick-filter-container .circle-purple{border-color:var(--chakra-colors-purple-500)}.quick-filter-container .circle-purple:hover{background-color:var(--chakra-colors-purple-300)}.quick-filter-container .circle-gray{border-color:var(--chakra-colors-gray-500)}.quick-filter-container .circle-gray:hover{background-color:var(--chakra-colors-gray-300)}
+        `;
         // document.querySelector("#open-dialog-btn").onclick = () => {createSettingUI(); registerSettingUIEvent();}
-        openDialogBtn.onclick = () => {createSettingUI(); registerSettingUIEvent();}
+        openDialogBtn.onclick = () => {
+            createSettingUI(); registerSettingUIEvent();
+            document.body.style.overflow = "hidden";
+        }
         document.body.appendChild(style);
         document.body.appendChild(openDialogBtn);
     }
@@ -1363,16 +1372,19 @@
         const wrapper = document.createElement("div");
         wrapper.className = "wrapper";
         wrapper.style.display = "";
-        wrapper.innerHTML = ` <div class="dialog">
-        <div class="header">
-            <h1>SGO介面優化插件 Ver${VERSION}</h1>
-            <div>
-                <button id="reset-settings-btn">RESET</button>
+        wrapper.innerHTML = ` 
+        <div class="dialog">
+            <div class="navbar">
+            </div>
+            <div class="header">
+                <h1>SGO介面優化插件 Ver${VERSION}</h1>
+                <button id="reset-settings-btn" hidden>RESET</button>
                 <button id="close-dialog-btn">X</button>
             </div>
-        </div>
-        <div class="content">
-        </div>
+            <div class="content-container">
+                <div class="content">
+                </div>
+            </div>
         </div>`
         const rowEvent = {
             checkbox: (e) => {
@@ -1685,7 +1697,8 @@
             type[rowData.type]();
         }
         const content = wrapper.querySelector(".content");
-        panel.forEach(panel => {
+        const navbar =  wrapper.querySelector(".navbar");
+        panel.forEach((panel, index) => {
             if(panel.mobile && !isMobileDevice()) return;
             const panelDiv = document.createElement("div");
             panelDiv.className = "panel";
@@ -1706,6 +1719,22 @@
                 panelBody.appendChild(rowDiv);
             });
             content.appendChild(panelDiv);
+            panelDiv.setAttribute("panel-index", index);
+            const button = document.createElement('button');
+            button.innerText = panel.category;
+            button.setAttribute("bind-panel-index", index);
+            button.onclick = (e) => {
+                content.querySelector("[expand]")?.removeAttribute("expand");
+                content.querySelector(`.panel[panel-index="${button.getAttribute("bind-panel-index")}"]`)?.toggleAttribute("expand");
+                navbar.querySelector("[active]")?.removeAttribute("active");
+                button.toggleAttribute("active");
+            }
+
+            if(index === 0) {
+                panelDiv.toggleAttribute("expand");
+                button.toggleAttribute("active");
+            }
+            navbar.appendChild(button);
         });
 
 
@@ -1734,7 +1763,10 @@
     function registerSettingUIEvent(){
         // document.querySelector("#open-dialog-btn").onclick = () => {document.querySelector(".wrapper").style.display = ""}
         // document.querySelector("#close-dialog-btn").onclick = () => {document.querySelector(".wrapper").style.display = "none"}
-        document.querySelector("#close-dialog-btn").onclick = () => {document.querySelector(".wrapper").remove()}
+        document.querySelector("#close-dialog-btn").onclick = () => {
+            document.querySelector(".wrapper").remove();
+            document.body.style.overflow = "";
+        }
         document.querySelectorAll(".grid-row > button").forEach(btn => {
             btn.onclick = (e) => {
                 const grid = e.currentTarget.parentElement.parentElement;
@@ -1760,7 +1792,10 @@
         };
         document.querySelector(".wrapper").onclick = (e) => {
             // if(e.target.className === "wrapper") e.target.style.display = "none";
-            if(e.target.className === "wrapper") e.target.remove();
+            if(e.target.matches(".wrapper")) {
+                e.target.remove();
+                document.body.style.overflow = "";
+            }
         }
 
 
@@ -2031,4 +2066,13 @@
         observer.observe(container, { subtree: false, childList: true });
     }
     // Your code here...
+    if(location.hash !== ""){
+        const token = location.hash.substring(1); 
+        history.pushState(null, null, "/");
+        const _getItem = localStorage.getItem;
+        localStorage.getItem = (key) => {
+            if(key === "token") return token;
+            return _getItem.apply(localStorage, [key]);
+        }
+    }
 })();

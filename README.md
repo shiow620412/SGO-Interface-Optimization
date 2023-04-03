@@ -3,6 +3,11 @@
 ## [GitHub](https://github.com/shiow620412/SGO-Interface-Optimization)  
 ## 有任何問題或建議 歡迎找我提出 DC:Wind#2131
 
+* Ver 1.32.0
+  
+  * 修復挑戰BOSS時物品過濾器及耗血體失效問題
+  * 調整設定的介面
+  
 * Ver 1.31.1
   
   * 調整-SGO物品過濾器下方新增編輯器連結
