@@ -3,6 +3,10 @@
 ## [GitHub](https://github.com/shiow620412/SGO-Interface-Optimization)  
 ## 有任何問題或建議 歡迎找我提出 DC:Wind#2131
 
+* Ver 1.32.1
+  
+  * 微調設定顏色的介面，從輸入色碼改成調成盤輸入
+  
 * Ver 1.32.0
   
   * 修復挑戰BOSS時物品過濾器及耗血體失效問題
