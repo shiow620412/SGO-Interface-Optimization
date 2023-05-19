@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.32.1
+// @version      1.33.1
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,7 +13,7 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.32.1"
+    const VERSION = "1.33.1"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const FORGE_STORAGE_NAME = "forgeLog";
     const DEFAULT_SETTINGS = {
@@ -49,6 +49,10 @@
         MARKET: {
             WATCH_LIST: [],
             BLACK_LIST: []
+        },
+        ITEM_RECORD:{
+            ENABLE: false,
+            RECORDS: {}
         },
         recipe: {}
     }
@@ -162,11 +166,13 @@
             });
 
             function apiEvent(data) {
+                //百分比血體
                 if(getSettingByKey("GENERAL.HUNT_STATUS_PERCENT")){
                     data.profile.fullHp += ` (${Math.floor(data.profile.hp / data.profile.fullHp * 100)}%)`
                     data.profile.fullSp += ` (${Math.floor(data.profile.sp / data.profile.fullSp * 100)}%)`
                 }
 
+                //爬層提示
                 if(currentZoneLevel === undefined) currentZoneLevel = data.profile.huntStage
                 if(data.profile.huntStage > currentZoneLevel){
                     data.messages.push({
@@ -176,6 +182,7 @@
                 }
                 currentZoneLevel = data.profile.huntStage;
 
+                //血量耗損提示
                 data.meta.teamA.forEach(player => {
                     const {name, hp} = player;
                     const index = data.messages.findIndex(msg => msg.m.match(`^${name}還有 [0-9]+ 點HP`));
@@ -190,17 +197,12 @@
                         }
                     }
                 })
+
+                //體力耗損提示
                 const nickname = data.profile.nickname
                 const metaData = data.meta.teamA.find(player => player.name === nickname);
                 const index = data.messages.findIndex(msg => msg.m.match(`^${nickname}還有 [0-9]+ 點HP`));
                 if(!!~index){
-                    // if(metaData.hp - data.profile.hp !== 0){
-                    //     if(metaData.hp - data.profile.hp > 0){
-                    //         data.messages[index].m += `(-${metaData.hp - data.profile.hp})`
-                    //     }else{
-                    //         data.messages[index].m += `(+${data.profile.hp - metaData.hp})`
-                    //     }
-                    // }
                     const msg = {m: "", s: "subInfo"}
                     if( metaData.sp - data.profile.sp > 0){
                         msg.m = `${nickname}還有 ${data.profile.sp} 點體力(-${metaData.sp - data.profile.sp })`
@@ -210,26 +212,55 @@
                     data.messages.splice(index+1, 0, msg)
                 }
 
-                // if(data.messages.find(msg => RegExp(`損壞了$`).test(msg.m)) && getSettingByKey("GENERAL.RED_BACKBROUND_WHEN_EQUIPMENT_BROKEN")){
-                //     document.querySelector("#__next").style.backgroundColor = "var(--chakra-colors-red-500)";
-                // }else{
-                //     document.querySelector("#__next").style.backgroundColor = "";                            
-                // }
+                
                 let findEquipmentBroken = false;
+                let settingChanged = false;
+                const playerNames = data.meta.teamA.map(player => player.name).join("|")
                 data.messages.forEach(message => {
+                    //裝備損壞
                     if(/損壞了$/.test(message.m)){
                         findEquipmentBroken = true;
                     }
 
+
+                    //物品過濾器
                     if(/獲得了.*/.test(message.m)){
-                        const itemName = message.m.replace(/.*獲得了/, "").replace(/\ \×\ [0-9]+/, "")
+                        const itemData = message.m.replace(/.*獲得了/, "").split(" × ");// .replace(/\ \×\ [0-9]+/, "")
+                        const itemName = itemData[0];
+                        const itemQuatity = itemData.length > 1 ? Number(itemData[1]) : 1;
                         
                         itemApplyFilter(itemName, {
                             playSound: true
                         })
+
+                        //狩獵記錄
+                        if(getSettingByKey("ITEM_RECORD.ENABLE")){                        
+                            const pattern = `(${playerNames}|)獲得了(.*)$`
+                            const regexResult = regexGetValue(pattern, message.m);
+
+                            if(!/ [0-9]+ 點.*(經驗值|熟練度)/.test(regexResult[1])){
+                                //單人狩獵判斷
+                                const currentPlayerName = regexResult[0] === "" ? nickname : regexResult[0]
+
+                                const records = getSettingByKey("ITEM_RECORD.RECORDS");
+                                if(!records[currentPlayerName]) records[currentPlayerName] = {}
+                                
+                                if(!records[currentPlayerName][itemName]){
+                                    records[currentPlayerName][itemName] = itemQuatity
+                                }else{
+                                    records[currentPlayerName][itemName] += itemQuatity
+                                }
+                                setObjectValueByRecursiveKey(SETTINGS, "ITEM_RECORD.RECORDS", records);
+                                settingChanged = true;
+                            }
+                        }
                     }
+
                 });
 
+                saveSettings();
+
+                //裝備損壞超級提示
                 if(findEquipmentBroken && getSettingByKey("GENERAL.RED_BACKBROUND_WHEN_EQUIPMENT_BROKEN")){
                     document.querySelector("#__next").style.backgroundColor = "var(--chakra-colors-red-500)";
                 }else{
@@ -290,7 +321,7 @@
                 });
 
             }
-            // itemApplyFilter("123", {highlight: true})
+
             function itemApplyFilter(itemName, config) {
                 if(!Array.isArray(filter)) {
                     const itemFilterEncode = getSettingByKey("GENERAL.ITEM_FILTER_ENCODE")        
@@ -1174,84 +1205,88 @@
     //攔截API回傳
     const _fetch = window.fetch;
     window.fetch = async (url, fetchOptions) => {
-        // console.log(url);
-        const originResp = await _fetch(url, fetchOptions);
-        const ab = await originResp.arrayBuffer()
-        const jsonObject = JSON.parse(new TextDecoder("utf-8").decode(ab));
-
-        //特殊問題 部分電腦的url不是字串而是requestInfo 需要取其中的url property來拿到api網址
-        const apiUrl = regexGetValue("api/(.*)", typeof url === "string" ? url : url.url);
-        // console.log(url, apiUrl);
-        if(apiUrl.length){
-            if(jsonObject.profile){
-                apiData["profile"] = structuredClone(jsonObject.profile);
-            
-                triggerEventHook("profile");
-
-            }
-            if(apiUrl[0].match("trades\\?category=[a-z]+")){ //特例常駐subscribe
-                apiData[apiUrl[0]] = structuredClone(jsonObject);
-                triggerEventHook(apiUrl[0]);
-
-                const category = regexGetValue("trades\\?category=([a-z]+)", apiUrl[0])[0];
-                GLOBAL_HIGHLIGHT_ROW[category].length = 0;
-                if(!getSettingByKey("GENERAL.DISABLE_MARKET_FUNCTION")){
-
-                    const blackList = getSettingByKey("MARKET.BLACK_LIST");
-                    apiData[apiUrl[0]].trades = apiData[apiUrl[0]].trades.filter(trade => !blackList.includes(trade.sellerName))
-
-                    const watchList = getSettingByKey("MARKET.WATCH_LIST");
-
-                    for(let i = 0; i < apiData[apiUrl[0]].trades.length; i++){
-                        const trade = apiData[apiUrl[0]].trades[i];
-                        if(watchList.includes(trade.sellerName)){
-                            GLOBAL_HIGHLIGHT_ROW[category].push(i);
+        try{
+            const originResp = await _fetch(url, fetchOptions);
+            const ab = await originResp.arrayBuffer()
+            const jsonObject = JSON.parse(new TextDecoder("utf-8").decode(ab));
+    
+            //特殊問題 部分電腦的url不是字串而是requestInfo 需要取其中的url property來拿到api網址
+            const apiUrl = regexGetValue("api/(.*)", typeof url === "string" ? url : url.url);
+            // console.log(url, apiUrl);
+            if(apiUrl.length){
+                if(jsonObject.profile){
+                    apiData["profile"] = structuredClone(jsonObject.profile);
+                
+                    triggerEventHook("profile");
+    
+                }
+                if(apiUrl[0].match("trades\\?category=[a-z]+")){ //特例常駐subscribe
+                    apiData[apiUrl[0]] = structuredClone(jsonObject);
+                    triggerEventHook(apiUrl[0]);
+    
+                    const category = regexGetValue("trades\\?category=([a-z]+)", apiUrl[0])[0];
+                    GLOBAL_HIGHLIGHT_ROW[category].length = 0;
+                    if(!getSettingByKey("GENERAL.DISABLE_MARKET_FUNCTION")){
+    
+                        const blackList = getSettingByKey("MARKET.BLACK_LIST");
+                        apiData[apiUrl[0]].trades = apiData[apiUrl[0]].trades.filter(trade => !blackList.includes(trade.sellerName))
+    
+                        const watchList = getSettingByKey("MARKET.WATCH_LIST");
+    
+                        for(let i = 0; i < apiData[apiUrl[0]].trades.length; i++){
+                            const trade = apiData[apiUrl[0]].trades[i];
+                            if(watchList.includes(trade.sellerName)){
+                                GLOBAL_HIGHLIGHT_ROW[category].push(i);
+                            }
                         }
                     }
-                }
-                return new Response(new TextEncoder().encode(JSON.stringify(apiData[apiUrl[0]])));
-                // apiData[apiUrl[0]].trades.forEach((trade, index) => {
-                // });
-
-            }else if(apiUrl[0].match("equipment\/([0-9]+)\/recycle")){
-                const equipmentId = regexGetValue("equipment\/([0-9]+)\/recycle", apiUrl[0])[0];
-                const equipment = GLOBAL_EQUIPMENTS.find(equipment => equipment.id === Number(equipmentId));
-                if(equipment && equipment.crafter !== null){
-                    const forgeTime = new Date(`${equipment.craftedTime}`)
-                    forgeTime.setSeconds(0);
-                    forgeTime.setMilliseconds(0);
-                    const base64 =  btoa(encodeURIComponent(`${forgeTime.getTime()},${equipment.name},${equipment.crafter}`))
-
-                    if(FORGE_LOG[base64]){
-                        delete FORGE_LOG[base64];
-                        saveForgeLog(FORGE_LOG);
+                    return new Response(new TextEncoder().encode(JSON.stringify(apiData[apiUrl[0]])));
+                    // apiData[apiUrl[0]].trades.forEach((trade, index) => {
+                    // });
+    
+                }else if(apiUrl[0].match("equipment\/([0-9]+)\/recycle")){
+                    const equipmentId = regexGetValue("equipment\/([0-9]+)\/recycle", apiUrl[0])[0];
+                    const equipment = GLOBAL_EQUIPMENTS.find(equipment => equipment.id === Number(equipmentId));
+                    if(equipment && equipment.crafter !== null){
+                        const forgeTime = new Date(`${equipment.craftedTime}`)
+                        forgeTime.setSeconds(0);
+                        forgeTime.setMilliseconds(0);
+                        const base64 =  btoa(encodeURIComponent(`${forgeTime.getTime()},${equipment.name},${equipment.crafter}`))
+    
+                        if(FORGE_LOG[base64]){
+                            delete FORGE_LOG[base64];
+                            saveForgeLog(FORGE_LOG);
+                        }
+                    }
+                }else if(apiUrl[0].match(".*\/[0-9]+\/sell")){
+                    try{
+                        
+                
+                    }catch(e){
+                        console.error(e);
                     }
                 }
-            }else if(apiUrl[0].match(".*\/[0-9]+\/sell")){
-                try{
-                    
-            
-                }catch(e){
-                    console.error(e);
-                }
+                // else if(location.pathname === "/hunt" && apiUrl[0] === "profile" && getSettingByKey("GENERAL.HUNT_STATUS_PERCENT")){
+                //     //狩獵頁面 顯示生命與體力的百分比
+                //     jsonObject.fullHp += ` (${Math.floor(jsonObject.hp / jsonObject.fullHp * 100)}%)`
+                //     jsonObject.fullSp += ` (${Math.floor(jsonObject.sp / jsonObject.fullSp * 100)}%)`
+                // }
+    
+                apiData[apiUrl[0]] = structuredClone(jsonObject);
+                triggerEventHook(apiUrl[0]);
+                // console.log(apiUrl[0], apiData);
+                return new Response(new TextEncoder().encode(JSON.stringify(apiData[apiUrl[0]])));
+    
+            }else{
+    
+                // console.log(apiData);
+                const uint8Array = new TextEncoder().encode(JSON.stringify(jsonObject));
+                const newResp = new Response(uint8Array);
+                return newResp;
             }
-            // else if(location.pathname === "/hunt" && apiUrl[0] === "profile" && getSettingByKey("GENERAL.HUNT_STATUS_PERCENT")){
-            //     //狩獵頁面 顯示生命與體力的百分比
-            //     jsonObject.fullHp += ` (${Math.floor(jsonObject.hp / jsonObject.fullHp * 100)}%)`
-            //     jsonObject.fullSp += ` (${Math.floor(jsonObject.sp / jsonObject.fullSp * 100)}%)`
-            // }
-
-            apiData[apiUrl[0]] = structuredClone(jsonObject);
-            triggerEventHook(apiUrl[0]);
-            // console.log(apiUrl[0], apiData);
-            return new Response(new TextEncoder().encode(JSON.stringify(apiData[apiUrl[0]])));
-
-        }else{
-
-            // console.log(apiData);
-            const uint8Array = new TextEncoder().encode(JSON.stringify(jsonObject));
-            const newResp = new Response(uint8Array);
-            return newResp;
+        }
+        catch(error){
+            console.error(error);
         }
 
     };
@@ -1357,7 +1392,7 @@
         const style = document.createElement("style");
         //scss
         style.innerText = `
-        *{box-sizing:border-box}.wrapper{display:flex;align-items:center;justify-content:center;background-color:rgba(15,19,26,.8);height:100vh;position:fixed;width:100%;left:0;top:0;overflow:auto;z-index:9999}.header{display:flex;justify-content:space-between;padding:1rem 1rem 0 1rem;position:absolute;width:calc(100% - 56px);top:0;left:56px;border-bottom:1px solid #3c3f43}.header button{height:100%}.header h1{color:#fff}.header #close-dialog-btn{margin-left:auto}.content-container{padding-top:50px;margin-left:56px;height:100%}.content-container .content{display:flex;margin:0 1rem 1rem 1rem;flex-direction:column;height:100%;overflow-y:scroll}.content-container .content hr{width:100%}.panel{position:relative;width:100%;display:flex;flex-direction:column;display:none;opacity:0}.panel input[type=checkbox]{margin:.5rem}.panel input[type=text]{background-color:#1a1d24;background-image:none;border:1px solid #3c3f43;border-radius:6px;color:#e9ebf0;display:block;font-size:14px;line-height:1.42857143;padding:7px 11px;transition:border-color .3s ease-in-out;width:100px}.panel input[type=color]{background-color:#292d33;width:50px}.panel[expand]{display:block;opacity:1}.panel-header{width:100%;padding:20px}.panel-header span{color:#fff;font-size:16px;line-height:1.25}.panel-body{padding:0 20px 20px 20px}.panel-body .row{margin-top:1rem;display:flex;align-items:center}.panel-body .row label{color:#a4a9b3;margin-right:1rem}.panel-body .row input{margin-right:1rem}.panel-body .row a{color:#a4a9b3;margin-right:1rem;text-decoration:underline}.panel-body .row a:hover{background-color:#3c3f43}.panel-body .row.table{flex-direction:column;align-items:flex-start}.grid{margin-top:10px;width:100%;color:#a4a9b3;background-color:#1a1d24}.grid div{border-bottom:1px solid #292d33;width:100%;height:40px;padding:10px}.grid .grid-row{display:flex;align-items:center}.grid .grid-row:hover{background-color:#3c3f43}.grid .grid-row button{font-size:14px;border:none;background-color:rgba(0,0,0,0);color:#9146ff;margin-left:auto}.grid .grid-row button:hover{cursor:pointer}.description{margin:0px;color:#a4a9b3;line-height:1.5;font-size:8px}.dialog{width:800px;height:500px;position:relative;overflow:auto;z-index:9999;display:flex;background-color:#292d33;border-radius:6px;box-shadow:0 4px 4px rgba(0,0,0,.12),0 0 10px rgba(0,0,0,.06);display:block}.dialog .navbar{height:500px;background-color:#1a1d24;width:56px;position:fixed;display:flex;flex-direction:column}.dialog .navbar button{height:50px}.dialog .navbar button:hover{background-color:#292d33}.dialog .navbar button[active]{background-color:#292d33}.dialog .right-container{margin-left:56px}#open-dialog-btn{position:-webkit-sticky;position:sticky;left:0;bottom:20px;margin-right:1rem;z-index:9998;color:#7d7d7d;background-color:rgba(0,0,0,0);border:none}#open-dialog-btn:hover{color:#fff}[hidden]{display:none}#exp-bar{position:fixed;bottom:0px;width:100%;height:24px}#exp-bar-fill{position:fixed;bottom:0px;left:0px;height:24px}.exp-container{display:flex;justify-content:flex-end;position:fixed;width:100%;bottom:0px}.quick-filter-container{display:flex;margin-bottom:.5rem;align-items:center;-webkit-box-align:center}.quick-filter-container div{width:18px;height:18px;margin-right:var(--chakra-space-3);border-radius:50%;background:var(--chakra-colors-transparent);border-width:2px;border-style:solid;-o-border-image:initial;border-image:initial;cursor:pointer}.quick-filter-container .circle-red{border-color:var(--chakra-colors-red-500)}.quick-filter-container .circle-red:hover{background-color:var(--chakra-colors-red-300)}.quick-filter-container .circle-blue{border-color:var(--chakra-colors-blue-500)}.quick-filter-container .circle-blue:hover{background-color:var(--chakra-colors-blue-300)}.quick-filter-container .circle-cyan{border-color:var(--chakra-colors-cyan-500)}.quick-filter-container .circle-cyan:hover{background-color:var(--chakra-colors-cyan-300)}.quick-filter-container .circle-green{border-color:var(--chakra-colors-green-500)}.quick-filter-container .circle-green:hover{background-color:var(--chakra-colors-green-300)}.quick-filter-container .circle-teal{border-color:var(--chakra-colors-teal-500)}.quick-filter-container .circle-teal:hover{background-color:var(--chakra-colors-teal-300)}.quick-filter-container .circle-orange{border-color:var(--chakra-colors-orange-500)}.quick-filter-container .circle-orange:hover{background-color:var(--chakra-colors-orange-300)}.quick-filter-container .circle-yellow{border-color:var(--chakra-colors-yellow-500)}.quick-filter-container .circle-yellow:hover{background-color:var(--chakra-colors-yellow-300)}.quick-filter-container .circle-pink{border-color:var(--chakra-colors-pink-500)}.quick-filter-container .circle-pink:hover{background-color:var(--chakra-colors-pink-300)}.quick-filter-container .circle-purple{border-color:var(--chakra-colors-purple-500)}.quick-filter-container .circle-purple:hover{background-color:var(--chakra-colors-purple-300)}.quick-filter-container .circle-gray{border-color:var(--chakra-colors-gray-500)}.quick-filter-container .circle-gray:hover{background-color:var(--chakra-colors-gray-300)}
+        *{box-sizing:border-box}.wrapper{display:flex;align-items:center;justify-content:center;background-color:rgba(15,19,26,.8);height:100vh;position:fixed;width:100%;left:0;top:0;overflow:auto;z-index:9999}.header{display:flex;justify-content:space-between;padding:1rem 1rem 0 1rem;position:absolute;width:calc(100% - 56px);top:0;left:56px;border-bottom:1px solid #3c3f43}.header button{height:100%}.header h1{color:#fff}.header #close-dialog-btn{margin-left:auto}.content-container{padding-top:50px;margin-left:56px;height:100%}.content-container .content{display:flex;margin:0 1rem 1rem 1rem;flex-direction:column;height:100%;overflow-y:scroll}.content-container .content hr{width:100%}.panel{position:relative;width:100%;display:flex;flex-direction:column;display:none;opacity:0}.panel input[type=checkbox]{margin:.5rem}.panel input[type=text]{background-color:#1a1d24;background-image:none;border:1px solid #3c3f43;border-radius:6px;color:#e9ebf0;display:block;font-size:14px;line-height:1.42857143;padding:7px 11px;transition:border-color .3s ease-in-out;width:100px}.panel input[type=color]{background-color:#292d33;width:50px}.panel button{border-radius:.375rem;padding:.25rem}.panel button.warning{background-color:var(--chakra-colors-red-500)}.panel button.warning:hover{background-color:var(--chakra-colors-red-600)}.panel[expand]{display:block;opacity:1}.panel-header{width:100%;padding:20px}.panel-header span{color:#fff;font-size:16px;line-height:1.25}.panel-body{padding:0 20px 20px 20px}.panel-body .row{margin-top:1rem;display:flex;align-items:center}.panel-body .row label{color:#a4a9b3;margin-right:1rem}.panel-body .row input{margin-right:1rem}.panel-body .row a{color:#a4a9b3;margin-right:1rem;text-decoration:underline}.panel-body .row a:hover{background-color:#3c3f43}.panel-body .row.table{flex-direction:column;align-items:flex-start}.record{width:100%;border-bottom:1px solid #3c3f43}.record .record-header{margin-top:.25rem}.record .record-body{display:flex;flex-direction:column}.record .record-item{display:flex;width:80%;margin:.5rem 0}.record .record-quatity{margin-left:auto}.grid{margin-top:10px;width:100%;color:#a4a9b3;background-color:#1a1d24}.grid div{border-bottom:1px solid #292d33;width:100%;height:40px;padding:10px}.grid .grid-row{display:flex;align-items:center}.grid .grid-row:hover{background-color:#3c3f43}.grid .grid-row button{font-size:14px;border:none;background-color:rgba(0,0,0,0);color:#9146ff;margin-left:auto}.grid .grid-row button:hover{cursor:pointer}.description{margin:0px;color:#a4a9b3;line-height:1.5;font-size:8px}.dialog{width:800px;height:500px;position:relative;overflow:auto;z-index:9999;display:flex;background-color:#292d33;border-radius:6px;box-shadow:0 4px 4px rgba(0,0,0,.12),0 0 10px rgba(0,0,0,.06);display:block}.dialog .navbar{height:500px;background-color:#1a1d24;width:56px;position:fixed;display:flex;flex-direction:column}.dialog .navbar button{height:50px}.dialog .navbar button:hover{background-color:#292d33}.dialog .navbar button[active]{background-color:#292d33}.dialog .right-container{margin-left:56px}#open-dialog-btn{position:-webkit-sticky;position:sticky;left:0;bottom:20px;margin-right:1rem;z-index:9998;color:#7d7d7d;background-color:rgba(0,0,0,0);border:none}#open-dialog-btn:hover{color:#fff}[hidden]{display:none}#exp-bar{position:fixed;bottom:0px;width:100%;height:24px}#exp-bar-fill{position:fixed;bottom:0px;left:0px;height:24px}.exp-container{display:flex;justify-content:flex-end;position:fixed;width:100%;bottom:0px}.quick-filter-container{display:flex;margin-bottom:.5rem;align-items:center;-webkit-box-align:center}.quick-filter-container div{width:18px;height:18px;margin-right:var(--chakra-space-3);border-radius:50%;background:var(--chakra-colors-transparent);border-width:2px;border-style:solid;-o-border-image:initial;border-image:initial;cursor:pointer}.quick-filter-container .circle-red{border-color:var(--chakra-colors-red-500)}.quick-filter-container .circle-red:hover{background-color:var(--chakra-colors-red-300)}.quick-filter-container .circle-blue{border-color:var(--chakra-colors-blue-500)}.quick-filter-container .circle-blue:hover{background-color:var(--chakra-colors-blue-300)}.quick-filter-container .circle-cyan{border-color:var(--chakra-colors-cyan-500)}.quick-filter-container .circle-cyan:hover{background-color:var(--chakra-colors-cyan-300)}.quick-filter-container .circle-green{border-color:var(--chakra-colors-green-500)}.quick-filter-container .circle-green:hover{background-color:var(--chakra-colors-green-300)}.quick-filter-container .circle-teal{border-color:var(--chakra-colors-teal-500)}.quick-filter-container .circle-teal:hover{background-color:var(--chakra-colors-teal-300)}.quick-filter-container .circle-orange{border-color:var(--chakra-colors-orange-500)}.quick-filter-container .circle-orange:hover{background-color:var(--chakra-colors-orange-300)}.quick-filter-container .circle-yellow{border-color:var(--chakra-colors-yellow-500)}.quick-filter-container .circle-yellow:hover{background-color:var(--chakra-colors-yellow-300)}.quick-filter-container .circle-pink{border-color:var(--chakra-colors-pink-500)}.quick-filter-container .circle-pink:hover{background-color:var(--chakra-colors-pink-300)}.quick-filter-container .circle-purple{border-color:var(--chakra-colors-purple-500)}.quick-filter-container .circle-purple:hover{background-color:var(--chakra-colors-purple-300)}.quick-filter-container .circle-gray{border-color:var(--chakra-colors-gray-500)}.quick-filter-container .circle-gray:hover{background-color:var(--chakra-colors-gray-300)}
         `;
         // document.querySelector("#open-dialog-btn").onclick = () => {createSettingUI(); registerSettingUIEvent();}
         openDialogBtn.onclick = () => {
@@ -1417,6 +1452,9 @@
                 const bindSetting = element.getAttribute("bind-setting");                
                 setObjectValueByRecursiveKey(SETTINGS, bindSetting, element.value)
                 saveSettings();
+            },
+            button: (e) => {
+
             }
         }
         const panel = [
@@ -1607,6 +1645,41 @@
                         bindSetting: "MARKET.BLACK_LIST"
                     }
                 ]
+            },
+            {
+                category: "狩獵記錄",
+                description: "記錄狩獵獲得的物品",
+                rows:[
+                    {
+                        id: "item-record",
+                        type: "checkbox",
+                        label: "啟用狩獵記錄",                    
+                        bindSetting: "ITEM_RECORD.ENABLE"
+                    },
+                    {
+                        id: "reset-item-record",
+                        type: "button",
+                        class: "warning",
+                        label: "重置狩獵記錄",                    
+                        bindSetting: "ITEM_RECORD.RECORDS",
+                        event: (e) => {
+                            const currentPanel = e.target.closest(".panel");
+                            currentPanel.querySelector(".row.table").innerHTML = `
+                                <label>當前記錄</label>
+                                <div style="margin: 1rem">無</div>
+                            `
+
+                            setObjectValueByRecursiveKey(SETTINGS, "ITEM_RECORD.RECORDS", {});
+                            saveSettings();
+                        }
+                    },
+                    {
+                        id: "item-record-table",
+                        type: "record-table",
+                        label: "當前記錄",
+                        bindSetting: "ITEM_RECORD.RECORDS"
+                    }
+                ]
             }
         ]
         function createRow(rowDiv, rowData){
@@ -1688,10 +1761,61 @@
                             ${gridRowHTML}
                         </div>`
                 },
+                "record-table": () => {
+                    /*
+                    {
+                        name: {
+                            itemName: quatity
+                        }
+                    }
+                    */
+                    const tableData = getSettingByKey(rowData.bindSetting);
+                    const names = Object.keys(tableData);
+                    let recordsHTML = "";
+                    if(!names.length){
+                        recordsHTML = `<div style="margin: 1rem">無</div>`
+                    }else{
+                        names.forEach(name => {
+                            const record = document.createElement("div");
+                            record.innerHTML = `
+                                <div class="record-header">${name} 獲得了</div>
+                            `
+                            record.className = "record"
+
+                            const recordBody = document.createElement("div");
+                            recordBody.className = "record-body";
+                            Object.keys(tableData[name]).forEach(itemName => {
+                                const recordItem = document.createElement("div");
+                                recordItem.className = "record-item";
+
+                                recordItem.innerHTML = `
+                                    <div class="record-name">${itemName}</div>
+                                    <div class="record-quatity"> x ${tableData[name][itemName]}</div>
+                                `
+
+                                recordBody.appendChild(recordItem);
+                            });
+
+                            record.appendChild(recordBody);
+
+                            recordsHTML += record.outerHTML;
+                        });
+                    }
+                    rowDiv.innerHTML =  `
+                        <label>${rowData.label}</label>
+                        ${recordsHTML}
+                    `
+                },
                 a: () => {
                     rowDiv.innerHTML = `
                         <a href="${rowData.link}" target="_blank" rel="noopener noreferrer">${rowData.label}</a>
                     `
+                },
+                button: () => {
+                    rowDiv.innerHTML = `
+                        <button class=${rowData.class}>${rowData.label} </button>
+                    `
+                    rowDiv.querySelector("button").onclick = rowData.event;
                 }
             }
             type[rowData.type]();
@@ -1713,7 +1837,7 @@
             const panelBody = panelDiv.querySelector(".panel-body");
             panel.rows.forEach(row => {
                 const rowDiv = document.createElement("div");
-                rowDiv.className = row.type === "table" ? "row table" : "row";
+                rowDiv.className = /table/.test(row.type) ? "row table" : "row";
                 createRow(rowDiv, row);
 
                 panelBody.appendChild(rowDiv);
@@ -1721,7 +1845,7 @@
             content.appendChild(panelDiv);
             panelDiv.setAttribute("panel-index", index);
             const button = document.createElement('button');
-            button.innerText = panel.category;
+            button.innerHTML = panel.category.length > 2 ? `${panel.category.substring(0, 2)}<br>${panel.category.substring(2)}` : panel.category;
             button.setAttribute("bind-panel-index", index);
             button.onclick = (e) => {
                 content.querySelector("[expand]")?.removeAttribute("expand");
