@@ -3,6 +3,10 @@
 ## [GitHub](https://github.com/shiow620412/SGO-Interface-Optimization)  
 ## 有任何問題或建議 歡迎找我提出 DC:Wind#2131
 
+* Ver 1.34.0
+
+  * 新增功能-狩獵結果可以套用過濾器顯示
+  
 * Ver 1.33.1
 
   * 修正狩獵結果記錄會將熟練列入記錄的問題

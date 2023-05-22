@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sword Gale Online 介面優化
 // @namespace    http://tampermonkey.net/
-// @version      1.33.1
+// @version      1.34.0
 // @description  優化界面
 // @author       Wind
 // @match        https://swordgale.online/*
@@ -13,7 +13,7 @@
 
 (function () {
     "use strict";
-    const VERSION = "1.33.1"
+    const VERSION = "1.34.0"
     const STORAGE_NAME = "SGO_Interface_Optimization";
     const FORGE_STORAGE_NAME = "forgeLog";
     const DEFAULT_SETTINGS = {
@@ -52,11 +52,13 @@
         },
         ITEM_RECORD:{
             ENABLE: false,
+            APPLY_FILTER: false,
             RECORDS: {}
         },
         recipe: {}
     }
     let FORGE_LOG = loadForgeLog();
+    let filter;
 
     let SETTINGS = loadSettings();
     const qualityJson = {
@@ -133,7 +135,7 @@
             }
         },
         "/hunt": () => {
-            let currentZoneLevel, filter;
+            let currentZoneLevel;
             bindEvent("/hunt", () => {
                 // const buttons = [
                 //     document.querySelector("button.chakra-tabs__tab[data-index='0']"),
@@ -322,30 +324,6 @@
 
             }
 
-            function itemApplyFilter(itemName, config) {
-                if(!Array.isArray(filter)) {
-                    const itemFilterEncode = getSettingByKey("GENERAL.ITEM_FILTER_ENCODE")        
-                    try{
-                        filter = JSON.parse(decodeURIComponent(atob(itemFilterEncode)));
-                    }catch(e){
-                        // console.error("parse error", e);
-                        filter = [];
-                    }
-                    
-                }
-
-                filter.forEach(filter => {
-                    if(filter.items.includes(itemName)){
-                        if(config.highlight) config.dom.style.color = filter.color
-                        if(config.playSound) {
-                            const audio = new Audio(filter.sound);
-                        
-                            audio.volume = filter.volume;
-                            audio.play().catch((err) => console.error(err));
-                        }
-                    }
-                });
-            }
 
             function beautifyHuntLog() {
                 if (localStorage.hunt_tabIndex === "1") return;
@@ -1452,9 +1430,6 @@
                 const bindSetting = element.getAttribute("bind-setting");                
                 setObjectValueByRecursiveKey(SETTINGS, bindSetting, element.value)
                 saveSettings();
-            },
-            button: (e) => {
-
             }
         }
         const panel = [
@@ -1674,6 +1649,30 @@
                         }
                     },
                     {
+                        id: "item-record-apply-filter",
+                        type: "checkbox",
+                        label: "狩獵記錄套用過濾器",                    
+                        bindSetting: "ITEM_RECORD.APPLY_FILTER",
+                        event: (e) => {
+                            const checked = e.target.checked
+
+                            const currentPanel = e.target.closest(".panel");
+                            currentPanel.querySelectorAll(".record-item").forEach((item) => {
+                                if(checked){
+                                    const result = itemApplyFilter(item.innerText.split("\n")[0], {
+                                        highlight: true,
+                                        dom: item
+                                    })
+                                    if(!result) item.style.display = "none";
+                                }else{
+                                    item.style.display = item.style.color = ""
+                                }
+
+
+                            });
+                        }
+                    },
+                    {
                         id: "item-record-table",
                         type: "record-table",
                         label: "當前記錄",
@@ -1692,6 +1691,9 @@
                     const mainElement = rowDiv.querySelector(`#${rowData.id}`);
                     mainElement.checked = getSettingByKey(rowData.bindSetting);
                     mainElement.onchange = rowEvent[rowData.type]
+                    if(rowData.event) {
+                        mainElement.addEventListener("change", rowData.event);
+                    }
                 },
                 input: () => {
                     rowDiv.innerHTML =  `
@@ -1775,6 +1777,8 @@
                     if(!names.length){
                         recordsHTML = `<div style="margin: 1rem">無</div>`
                     }else{
+                        const itemRecordApplyFilter = getSettingByKey("ITEM_RECORD.APPLY_FILTER");
+
                         names.forEach(name => {
                             const record = document.createElement("div");
                             record.innerHTML = `
@@ -1792,7 +1796,14 @@
                                     <div class="record-name">${itemName}</div>
                                     <div class="record-quatity"> x ${tableData[name][itemName]}</div>
                                 `
+                                if(itemRecordApplyFilter) {
+                                    const result = itemApplyFilter(itemName, {
+                                        highlight: true,
+                                        dom: recordItem
+                                    });
 
+                                    if(!result)  recordItem.style.display = "none";                                   
+                                }
                                 recordBody.appendChild(recordItem);
                             });
 
@@ -1844,6 +1855,7 @@
             });
             content.appendChild(panelDiv);
             panelDiv.setAttribute("panel-index", index);
+            //panel 切換
             const button = document.createElement('button');
             button.innerHTML = panel.category.length > 2 ? `${panel.category.substring(0, 2)}<br>${panel.category.substring(2)}` : panel.category;
             button.setAttribute("bind-panel-index", index);
@@ -2018,6 +2030,34 @@
         }
         return false
     }
+
+    function itemApplyFilter(itemName, config) {
+        if(!Array.isArray(filter)) {
+            const itemFilterEncode = getSettingByKey("GENERAL.ITEM_FILTER_ENCODE")        
+            try{
+                filter = JSON.parse(decodeURIComponent(atob(itemFilterEncode)));
+            }catch(e){
+                // console.error("parse error", e);
+                filter = [];
+            }
+            
+        }
+        let result = false;
+        filter.forEach(filter => {
+            if(filter.items.includes(itemName)){
+                if(config.highlight) config.dom.style.color = filter.color
+                if(config.playSound) {
+                    const audio = new Audio(filter.sound);
+                
+                    audio.volume = filter.volume;
+                    audio.play().catch((err) => console.error(err));
+                }
+                result = true;
+            }
+        });
+        return result;
+    }
+    
     /**
      * @returns {{name: string, isNumeric: boolean}[]}
      */
@@ -2153,7 +2193,6 @@
 
     function loadObserver() {
         const observer = new MutationObserver(function (e) {
-            // console.log(e);
 
             //奇怪的DOM 導致forge UI產生兩次
             if (e.length) {
@@ -2165,8 +2204,6 @@
                         (e[i].removedNodes.length && e[i].removedNodes[0].tagName === "DIV")
                     ) {
                         renderDiv = true;
-                        // console.log("DOM !!!!", e, location.pathname)
-                        // return;
                     }
                 }
                 if(!renderDiv) return;
@@ -2189,7 +2226,7 @@
         });
         observer.observe(container, { subtree: false, childList: true });
     }
-    // Your code here...
+
     if(location.hash !== ""){
         const token = location.hash.substring(1); 
         history.pushState(null, null, "/");
