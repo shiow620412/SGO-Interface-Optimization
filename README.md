@@ -1,12 +1,18 @@
 # 優化[Sword Gale Online](https://swordgale.online/)介面  
 ## [Greasy Fork ](https://greasyfork.org/zh-TW/scripts/453463-sword-gale-online-%E4%BB%8B%E9%9D%A2%E5%84%AA%E5%8C%96)  
 ## [GitHub](https://github.com/shiow620412/SGO-Interface-Optimization)  
-## 有任何問題或建議 歡迎找我提出 
- * DC:Wind#2131 
- * Email:[shiow620412@gmail.com](shiow620412@gmail.com)
-## 如果你贊助完[茅場晶彥Buy Me a Coffee](https://www.buymeacoffee.com/ourcastle)還有餘力
-## 可以考慮一下我的[Buy Me a Coffee](https://www.buymeacoffee.com/sgoeplugin)
 
+## 如果你覺得插件對你有幫助，歡迎請我喝杯咖啡 [Buy Me a Coffee](https://www.buymeacoffee.com/sgoeplugin)
+## 請我喝咖啡之前，先請茅場晶彥喝一杯吧！[茅場晶彥Buy Me a Coffee](https://www.buymeacoffee.com/ourcastle)
+
+## 有任何問題或建議 歡迎找我提出 
+ > DC:Wind#2131  
+ > Email:[shiow620412@gmail.com](shiow620412@gmail.com)  
+
+* Ver 1.35.0
+
+  * 新增贊助頁面
+  
 * Ver 1.34.0
 
   * 新增功能-狩獵結果記錄可以套用過濾器顯示
