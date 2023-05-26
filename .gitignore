@@ -1,7 +1,7 @@
 sgoScript Ver*.js
-style.css
-style.css.map
-*.json
 /apiData
 /release
 /customize
+/dist
+/node_modules
+/temp
