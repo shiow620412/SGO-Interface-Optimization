@@ -156,7 +156,7 @@ function clickRecipe(e) {
     }
 
     const materialTable = materialDiv.querySelector("table");
-    const tableData = getTableData(materialTable, {
+    const tableData = commonUtil.getTableData(materialTable, {
         name: "名稱",
         isNumeric: false,
     });
@@ -206,7 +206,7 @@ function addRecipe() {
         recipeData = settingStorage.get("recipe");
         if (!recipeData[recipeName] && materials.length > 0) {
             recipeData[recipeName] = materials.join("、");
-            SETTINGS["recipe"] = recipeData;
+            settingStorage.set("recipe", recipeData);
             settingStorage.save();
             refreshRecipeTable();
             recipeNameInput.value = "";
@@ -222,7 +222,7 @@ function removeRecipe(e) {
     const row = e.target.parentElement.parentElement;
     const recipeName = row.querySelector("td").innerText;
     delete recipeData[recipeName];
-    SETTINGS["recipe"] = recipeData;
+    settingStorage.set("recipe", recipeData);
     settingStorage.save();
     row.remove();
 }

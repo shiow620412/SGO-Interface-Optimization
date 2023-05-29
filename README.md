@@ -9,6 +9,10 @@
  > DC:Wind#2131  
  > Email:[shiow620412@gmail.com](shiow620412@gmail.com)  
 
+* Ver 1.36.1
+
+  * 修復鍛造頁面合成配方無法正常使用
+  
 * Ver 1.36.0
 
   * 插件Code重構，功能沒有變動
