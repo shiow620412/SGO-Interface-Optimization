@@ -1,0 +1,5 @@
+{
+    "verbose": true,
+    "exec": "npm run debug",
+    "watch": ["src/"]
+  }
