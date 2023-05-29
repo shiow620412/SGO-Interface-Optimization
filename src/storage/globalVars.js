@@ -1,5 +1,7 @@
 const globalVars = {
-    VERSION: "1.36.1",
+    VERSION: "1.37.0",
+    LATEST_VERSION: "",
+    UPDATE_CHECK_INTERVAEL: 3600,
     HIGHTLIGHT_ROW: {
         equipments: [],
         mines: [],

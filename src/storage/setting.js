@@ -27,6 +27,7 @@ const DEFAULT_SETTINGS = {
         HUNT_STATUS_PERCENT: false,
         SHOW_EXP_BAR: false,
         RED_BACKBROUND_WHEN_EQUIPMENT_BROKEN: false,
+        FORGE_NOTIFICATION: false,
         EXP_BAR_FILL_BACKGROUND_IMAGE_URL: "",
         BACKGROUND_IMAGE_URL: "",
         ITEM_FILTER_ENCODE: "",
@@ -39,6 +40,10 @@ const DEFAULT_SETTINGS = {
         ENABLE: false,
         APPLY_FILTER: false,
         RECORDS: {}
+    },
+    UPDATE:{
+        LAST_CHECK_TIMESTAMP: 0,
+        LATEST_VERSION: ""
     },
     recipe: {}
 }

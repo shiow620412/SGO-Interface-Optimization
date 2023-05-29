@@ -5,7 +5,6 @@ const eventUtil = require("../utils/event");
 const forgeStorage = require("../storage/forge");
 const globalVarsStorage = require("../storage/globalVars")
 const uiUtil = require("../utils/ui");
-const tablesColumns = {};
 
 const quality = {
     傳說: [2.3, 0.82],
@@ -23,16 +22,15 @@ const quality = {
     垃圾般: [0.55, 1.06],
     屎一般: [0.4, 1.1],
 }
-// const needHighlightRow = {
-//     equipments: [],
-//     mines: [],
-//     items: []
-// };
-// const highlightRowData = {
-//     equipments: [],
-//     mines: [],
-//     items: []
-// }
+
+
+const tablesColumns = {};
+const equipmentFilter = {
+    color: "",
+    type: "",
+}
+
+
 function Init() {
     commonUtil.bindEvent(["/items", "/market"], () => {
         //var targetContainer = document.querySelector(".chakra-tabs").childNodes[2];
@@ -43,8 +41,6 @@ function Init() {
             return;
         }
         commonUtil.clearTimers();
-        // if (location.pathname === "/items") {
-            // targetContainer = document.querySelector(".chakra-tabs");
         const observer = new MutationObserver((e) => {
             if(e.length === 2 && e[1].addedNodes.length && e[1].addedNodes[0].innerHTML !== ''){
                 if(!settingStorage.get("GENERAL.DISABLE_TRUE_STATS")) onItemsDetail(e[1].addedNodes[0].childNodes[0].childNodes);
@@ -54,6 +50,7 @@ function Init() {
         observer.observe(targetContainer, {subtree: false, childList:true })
         commonUtil.addObserver(observer);
     
+
         if(!document.querySelector("#searchPlayerName") && location.pathname === "/market") {
     
             const [div, input] = uiUtil.createSearchUI("搜尋販賣者", "searchPlayerName");
@@ -69,43 +66,26 @@ function Init() {
             ["equipments", "mines", "items"].forEach(category => {
                 eventUtil.subscribeApi(`trades?category=${category}`, (data) => {
                     data.trades = data.trades.filter(trade => trade.sellerName.match(input.value))
-                    
-                    // highlightRowData[category].length = 0;
-                    // if(!settingStorage.get("GENERAL.DISABLE_MARKET_FUNCTION")){
-
-                    
-
-                    //     const watchList = settingStorage.get("MARKET.WATCH_LIST");
-
-                    //     for(let i = 0; i < data.trades.length; i++){
-                    //         const trade = data.trades[i];
-                    //         if(watchList.includes(trade.sellerName)){
-                    //             highlightRowData[category].push(i);
-                    //         }
-                    //     }
-                    // }
-    
+                
                 });
             });
         };
     
-        // targetContainer.querySelectorAll(".chakra-tabs__tab-panels > div > .chakra-container").forEach(tabDiv => {
-        //     document.querySelector(".chakra-tabs").appendChild.appendChild(div);
-        // })
-        // observer.observe(targetContainer, {
-        //     subtree: true,
-        //     childList: true,
-        //     characterData: true,
-        // });
-    // }
+
         const types = ["equipments", "mines", "items"]
         tables.forEach((table) => {
             const type = types.shift();
             const tableId = `table${Object.keys(tablesColumns).length}-${type}`;
             table.id = tableId;
             tablesColumns[tableId] = commonUtil.getTableColumns(table, sortTable);
-    
             if(location.pathname === "/items") {
+                const tableData = commonUtil.getTableData(table, {name: "類型", isNumeric: false}, tablesColumns[tableId]);
+                const types = [];
+                tableData.forEach(row => {
+                    if(!types.includes(row["類型"])) types.push(row["類型"])
+                })
+
+                createTypeFilter(table, types);
                 createQuickFilter(table);
             }else if(location.pathname === "/market"){
     
@@ -145,7 +125,36 @@ function Init() {
     
 }
 
+function filterTable( ){
+    // if(equipmentFilter.color === "" && equipmentFilter.type === "") return;
+
+    const equipmentTableRow = document.querySelectorAll("#table0-equipments > tbody > tr");
+
+    equipmentTableRow.forEach(tr => {
+        const equipmentColor = getComputedStyle(tr.querySelector("td:nth-child(1) > div")).borderColor;
+        const equipmentType = tr.querySelector("td:nth-child(2)").textContent;
+
+        
+        if(equipmentFilter.color === "" || equipmentFilter.color === equipmentColor){
+            tr.style.display = "";
+        }else{
+            tr.style.display = "none";
+            return;
+        }
+
+        if(equipmentFilter.type === "" || equipmentFilter.type === equipmentType){
+            tr.style.display = "";
+        }else{
+            tr.style.display = "none";
+            return;
+        }
+    });
+
+}
+
+
 function createQuickFilter(table) {
+    if(document.querySelector(".quick-filter-container")) return;
     const quickFilterContainer = document.createElement("div");
     
     quickFilterContainer.classList.add("quick-filter-container");
@@ -167,14 +176,16 @@ function createQuickFilter(table) {
                 circle.style.backgroundColor = `var(--chakra-colors-${color}-500)`;
                 targetColor = color === "gray" ? "rgba(0, 0, 0, 0)" : getComputedStyle(circle).backgroundColor;
             }
-            table.querySelectorAll("tr > td:nth-child(1) > div").forEach(div => {
-                const tr = div.parentElement.parentElement;
-                if(targetColor === "" || getComputedStyle(div).borderColor === targetColor){
-                    tr.style.display = "";
-                }else{
-                    tr.style.display = "none";
-                }
-            });
+            equipmentFilter.color = targetColor;
+            filterTable();
+            // table.querySelectorAll("tr > td:nth-child(1) > div").forEach(div => {
+            //     const tr = div.parentElement.parentElement;
+            //     if(targetColor === "" || getComputedStyle(div).borderColor === targetColor){
+            //         tr.style.display = "";
+            //     }else{
+            //         tr.style.display = "none";
+            //     }
+            // });
         };
 
         quickFilterContainer.appendChild(circle);
@@ -182,6 +193,50 @@ function createQuickFilter(table) {
 
     table.before(quickFilterContainer);
 }
+
+function createTypeFilter(table, types) {
+    if(document.querySelector(".type-filter-container")) return;
+
+    const typeFilterContainer = document.createElement("div");
+    
+    typeFilterContainer.classList.add("type-filter-container");
+    typeFilterContainer.innerText = "類型："
+
+    // const types = ["單手劍", "細劍", "短刀", "單手錘", "盾牌", "雙手劍", "太刀", "雙手斧", "長槍", "大衣", "盔甲", "戒指"];
+    types.forEach(type => {
+        const choice = document.createElement("div");
+        const circle = document.createElement("div");
+
+        choice.classList.add(`choice`);
+        circle.classList.add("circle");
+
+        choice.appendChild(circle);
+        choice.append(type)
+
+        choice.onclick = (e) => {
+            if(!e.target.matches(".circle")) return;
+            // console.log(choice, circle);
+            let lastClickCircle;
+            choice.parentNode.querySelectorAll("div > .circle").forEach(div => {
+                if(div.style.backgroundColor !== "") lastClickCircle = div;
+                div.style.backgroundColor = ""
+            })
+
+            equipmentFilter.type = "";
+            if(lastClickCircle !== circle) {
+                circle.style.backgroundColor = `var(--chakra-colors-gray-500)`;
+                equipmentFilter.type = type
+            }
+
+            filterTable();
+        };
+
+        typeFilterContainer.appendChild(choice);
+    });
+
+    table.before(typeFilterContainer);
+}
+
 function sortTable(e) {
     const tableDOM = e.target.parentElement.parentElement.parentElement;
     const sortClassDOM = tableDOM.querySelector(".sort");

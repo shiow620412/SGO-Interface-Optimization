@@ -3,6 +3,9 @@ const commonUtil = require("./common");
 const uiUtil = require("./ui")
 const forgeStorage = require("../storage/forge")
 const globalVarsStorage = require("../storage/globalVars")
+
+let updateAnnouncement;
+let forgeNotificationTimes = [];
 const subscribeEvents = []
 const specialSubscribeEvents = {
     profile: [
@@ -47,13 +50,67 @@ const specialSubscribeEvents = {
 
             }
         },
+        (data) => {
+            if(settingStorage.get("GENERAL.FORGE_NOTIFICATION") && 'Notification' in window && Notification.permission === "granted") {
+                if(!data.forgingCompletionTime || data.forgingCompletionTime - new Date().getTime() < 0 || forgeNotificationTimes.includes(data.forgingCompletionTime))return;
+
+                const currentForgeCompletionTime = data.forgingCompletionTime;
+                forgeNotificationTimes.push(currentForgeCompletionTime);
+                
+                setTimeout(() => {
+                    new Notification(`${data.nickname} 鍛造已完成！`)
+                    forgeNotificationTimes = forgeNotificationTimes.filter(time => time !== currentForgeCompletionTime);
+                }, currentForgeCompletionTime - new Date().getTime());
+
+            }
+        },
     ],
     announcement: [
         (data) => {
-            // data.announcement = {
-            //     test: "AAA"
-            // }
-            // console.log(data);
+            if(data.announcement) return;
+            if(updateAnnouncement) {
+                data.announcement = structuredClone(updateAnnouncement);
+                return;
+            }
+
+            const latestVersion = globalVarsStorage.get("LATEST_VERSION");
+            let haveNewVersion = false;
+            /*
+            const setting = JSON.parse(localStorage.getItem("SGO_Interface_Optimization"))
+            setting.UPDATE.LAST_CHECK_TIMESTAMP = 0
+            setting.UPDATE.LATEST_VERSION = ""
+            localStorage.setItem("SGO_Interface_Optimization", JSON.stringify(setting));
+            */
+            if(settingStorage.get("UPDATE.LAST_CHECK_TIMESTAMP") + globalVarsStorage.get("UPDATE_CHECK_INTERVAEL") < new Date().getTime()  
+                && settingStorage.get("UPDATE.LATEST_VERSION") !== latestVersion) {
+
+                settingStorage.set("UPDATE.LATEST_VERSION", latestVersion);
+                settingStorage.set("UPDATE.LAST_CHECK_TIMESTAMP", new Date().getTime());
+                settingStorage.save();
+                const currentVersionSplit = globalVarsStorage.get("VERSION").split(".");
+                const latestVersionSplit = latestVersion.split(".");
+                //依序比較大中小版本號
+                for(let i = 0; i < 3; i++){
+
+                    if(Number(latestVersionSplit[i]) > Number(currentVersionSplit[i])){
+                        haveNewVersion = true;
+                        break;
+                    }          
+                } 
+                
+                
+
+                if(haveNewVersion){
+
+                    data.announcement = {
+                        status: "info",
+                        message: `[SGO介面優化] 發現插件新版本 Ver ${latestVersion}`,            
+                    }
+    
+                    updateAnnouncement = structuredClone(data.announcement);
+                }
+            }
+
         }
     ]
 }

@@ -3,8 +3,8 @@ const scriptLoader = require("./pages/main").default;
 const commonUtil = require("./utils/common");
 const uiUtil = require("./utils/ui");
 const settingStorage = require("./storage/setting");
+const globalVarsStorage = require("./storage/globalVars");
 const eventUtil = require("./utils/event");
-
 const pageScript = {
     "/profile": () => {
         scriptLoader.profile();
@@ -23,6 +23,12 @@ const pageScript = {
     },
 };
 
+if(settingStorage.get("UPDATE.LAST_CHECK_TIMESTAMP") + globalVarsStorage.get("UPDATE_CHECK_INTERVAEL") < new Date().getTime()) {
+
+    fetch("https://sgo-filter.wind-tech.tw/api/version").then(res => res.json()).then((data) => {
+        globalVarsStorage.set("LATEST_VERSION", data["version"]);
+    })
+}
 
 let container;
 let debounce = 0;

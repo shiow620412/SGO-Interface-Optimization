@@ -1,407 +1,408 @@
-// * {
-//     box-sizing: border-box;
-// }
+* {
+    box-sizing: border-box;
+}
 
-// .wrapper {
-//     display: flex;
-//     align-items: center;
-//     justify-content: center;
+.wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-//     background-color: rgba(15, 19, 26, .8);
-//     height: 100vh;
+    background-color: rgba(15, 19, 26, .8);
+    height: 100vh;
 
-//     position: fixed;
-//     width: 100%;
-//     /* height: 100%; */
-//     left: 0;
-//     top: 0;
-//     overflow: auto;
-//     z-index: 9999;
-// }
+    position: fixed;
+    width: 100%;
+    /* height: 100%; */
+    left: 0;
+    top: 0;
+    overflow: auto;
+    z-index: 9999;
+}
 
-// .header {
-//     display: flex;
-//     justify-content: space-between;    
-//     padding: 1rem 1rem 0 1rem;
+.header {
+    display: flex;
+    justify-content: space-between;    
+    padding: 1rem 1rem 0 1rem;
+    position: absolute;
+    width: calc(100% - 56px);
+    top: 0;
+    left: 56px;
+
+    border-bottom: 1px solid #3c3f43;
+    button {
+        height: 100%;
+    }
+    h1 {
+        color: #fff;
+    }
+    // #reset-settings-btn {
+    #close-dialog-btn {
+        // border: 1px solid #3c3f43;
+        margin-left: auto;
+    }
+
+}
+
+.content-container {
+
+    padding-top: 50px;
+    margin-left: 56px;
+    height: 100%;
+
+    .content {
+        display: flex;
+        margin: 0 1rem 1rem 1rem;
+        flex-direction: column;
+        height: 100%;
+        overflow-y: scroll;
+        hr{
+            width: 100%;
+        }
+    }
+}
+
+
+.panel {
+    position: relative;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    display: none;
+    opacity: 0;    
+
+    input[type=checkbox] {
+        margin: 0.5rem;
+    }
+    input[type=text]{
+    
+        background-color: #1a1d24;
+        background-image: none;
+        border: 1px solid #3c3f43;
+        border-radius: 6px;
+        color: #e9ebf0;
+        display: block;
+        font-size: 14px;
+        line-height: 1.42857143;
+        padding: 7px 11px;
+        transition: border-color .3s ease-in-out;
+        width: 100px;
+        
+    }
+
+    input[type=color] {
+        background-color: #292d33;
+        width: 50px;
+    }
+
+    button {
+        border-radius: 0.375rem;
+        padding: 0.25rem;
+        
+        &.warning{            
+            background-color: var(--chakra-colors-red-500);
+            &:hover{
+                background-color: var(--chakra-colors-red-600);
+            }
+        }
+    }
+
+    &[expand] {
+        display: block;
+        opacity: 1;
+    }
+}
+
+// .panel + .panel::before {
+//     border-top: 1px solid #3c3f43;
+//     content: "";
+//     left: 20px;
 //     position: absolute;
-//     width: calc(100% - 56px);
+//     right: 20px;
 //     top: 0;
-//     left: 56px;
-
-//     border-bottom: 1px solid #3c3f43;
-//     button {
-//         height: 100%;
-//     }
-//     h1 {
-//         color: #fff;
-//     }
-//     // #reset-settings-btn {
-//     #close-dialog-btn {
-//         // border: 1px solid #3c3f43;
-//         margin-left: auto;
-//     }
-
-// }
-
-// .content-container {
-
-//     padding-top: 50px;
-//     margin-left: 56px;
-//     height: 100%;
-
-//     .content {
-//         display: flex;
-//         margin: 0 1rem 1rem 1rem;
-//         flex-direction: column;
-//         height: 100%;
-//         overflow-y: scroll;
-//         hr{
-//             width: 100%;
-//         }
-//     }
-// }
-
-
-// .panel {
-//     position: relative;
-//     width: 100%;
-//     display: flex;
-//     flex-direction: column;
-//     display: none;
-//     opacity: 0;    
-
-//     input[type=checkbox] {
-//         margin: 0.5rem;
-//     }
-//     input[type=text]{
-    
-//         background-color: #1a1d24;
-//         background-image: none;
-//         border: 1px solid #3c3f43;
-//         border-radius: 6px;
-//         color: #e9ebf0;
-//         display: block;
-//         font-size: 14px;
-//         line-height: 1.42857143;
-//         padding: 7px 11px;
-//         transition: border-color .3s ease-in-out;
-//         width: 100px;
-        
-//     }
-
-//     input[type=color] {
-//         background-color: #292d33;
-//         width: 50px;
-//     }
-
-//     button {
-//         border-radius: 0.375rem;
-//         padding: 0.25rem;
-        
-//         &.warning{            
-//             background-color: var(--chakra-colors-red-500);
-//             &:hover{
-//                 background-color: var(--chakra-colors-red-600);
-//             }
-//         }
-//     }
-
-//     &[expand] {
-//         display: block;
-//         opacity: 1;
-//     }
-// }
-
-// // .panel + .panel::before {
-// //     border-top: 1px solid #3c3f43;
-// //     content: "";
-// //     left: 20px;
-// //     position: absolute;
-// //     right: 20px;
-// //     top: 0;
    
-// // }
-// .panel-header{
-//     width: 100%;
-//     padding: 20px;
-//     span {
+// }
+.panel-header{
+    width: 100%;
+    padding: 20px;
+    span {
        
-//         color: #fff;
-//         font-size: 16px;
-//         line-height: 1.25;
-//     }
-// }
+        color: #fff;
+        font-size: 16px;
+        line-height: 1.25;
+    }
+}
 
-// .panel-body {
-//     padding: 0 20px 20px 20px;
+.panel-body {
+    padding: 0 20px 20px 20px;
 
-//     .row {
-//         margin-top: 1rem;
-//         display: flex;
-//         align-items: center;
-//         label{
-//             color: #a4a9b3;
-//             margin-right: 1rem;
-//         }
-//         input {
-//             margin-right: 1rem;
-//         }
+    .row {
+        margin-top: 1rem;
+        display: flex;
+        align-items: center;
+        label{
+            color: #a4a9b3;
+            margin-right: 1rem;
+        }
+        input {
+            margin-right: 1rem;
+        }
         
-//         a{
-//             color: #a4a9b3;
-//             margin-right: 1rem;
-//             text-decoration: underline;
+        a{
+            color: #a4a9b3;
+            margin-right: 1rem;
+            text-decoration: underline;
 
-//             &:hover{
-//                 background-color: #3c3f43;
-//             }
-//         }
-//     }
-//     .row.table{
+            &:hover{
+                background-color: #3c3f43;
+            }
+        }
+    }
+    .row.table{
 
-//         flex-direction: column;
-//         align-items: flex-start;
-//     }
-// }
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
 
-// .record {
+.record {
     
-//     width: 100%;
-//     border-bottom: 1px solid #3c3f43;
+    width: 100%;
+    border-bottom: 1px solid #3c3f43;
 
-//     .record-header {
-//         margin-top: 0.25rem;
-//     }
+    .record-header {
+        margin-top: 0.25rem;
+    }
 
-//     .record-body {
-//         display: flex;
-//         flex-direction: column;
-//     }    
+    .record-body {
+        display: flex;
+        flex-direction: column;
+    }    
 
-//     .record-item {
-//         display: flex;
-//         width: 80%;
-//         margin: 0.5rem 0;
-//     }
+    .record-item {
+        display: flex;
+        width: 80%;
+        margin: 0.5rem 0;
+    }
 
-//     .record-name {
+    .record-name {
 
-//     }
+    }
 
-//     .record-quatity {
-//         margin-left: auto;
-//     }
-// }
+    .record-quatity {
+        margin-left: auto;
+    }
+}
 
-// .grid {
-//     margin-top: 10px;
-//     width: 100%;
-//     color: #a4a9b3;
-//     background-color: #1a1d24;
-//     div {
-//         border-bottom: 1px solid #292d33;
-//         width: 100%;
-//         height: 40px;
-//         padding: 10px;
-//     }
-//     .grid-row {
-//         &:hover{
-//             background-color: #3c3f43;
-//         }
-//         display: flex;
-//         align-items: center;
-//         button {
-//             &:hover {
-//                 cursor: pointer;
-//             }
-//             font-size: 14px;
-//             border: none;
-//             background-color: transparent;
-//             color: #9146ff;
-//             margin-left: auto;
-//         }
-//         // background-color: rebeccapurple;
-//     }
-// }
-// .description {
-//     margin: 0px;
-//     color: #a4a9b3;
-//     line-height: 1.5;
-//     font-size: 8px;
-// }
-// .dialog {
-//     width: 800px;
-//     height: 500px;
-//     position: relative;
-//     overflow: auto;
-//     z-index: 9999;
-//     display: flex;
-//     background-color: #292d33;
-//     border-radius: 6px;
-//     box-shadow: 0 4px 4px rgba(0,0,0,.12),0 0 10px rgba(0,0,0,.06);
-//     display: block;
-//     .navbar {
-//         height: 500px;
-//         background-color: #1a1d24;
-//         width: 56px;
-//         position: fixed;
-//         display: flex;
-//         flex-direction: column;
+.grid {
+    margin-top: 10px;
+    width: 100%;
+    color: #a4a9b3;
+    background-color: #1a1d24;
+    div {
+        border-bottom: 1px solid #292d33;
+        width: 100%;
+        height: 40px;
+        padding: 10px;
+    }
+    .grid-row {
+        &:hover{
+            background-color: #3c3f43;
+        }
+        display: flex;
+        align-items: center;
+        button {
+            &:hover {
+                cursor: pointer;
+            }
+            font-size: 14px;
+            border: none;
+            background-color: transparent;
+            color: #9146ff;
+            margin-left: auto;
+        }
+        // background-color: rebeccapurple;
+    }
+}
+.description {
+    margin: 0px;
+    color: #a4a9b3;
+    line-height: 1.5;
+    font-size: 8px;
+}
+.dialog {
+    width: 800px;
+    height: 500px;
+    position: relative;
+    overflow: auto;
+    z-index: 9999;
+    display: flex;
+    background-color: #292d33;
+    border-radius: 6px;
+    box-shadow: 0 4px 4px rgba(0,0,0,.12),0 0 10px rgba(0,0,0,.06);
+    display: block;
+    .navbar {
+        height: 500px;
+        background-color: #1a1d24;
+        width: 56px;
+        position: fixed;
+        display: flex;
+        flex-direction: column;
     
-//         button {
-//             height: 50px;
-//             &:hover{
-//                 background-color: #292d33;
-//             }
+        button {
+            height: 50px;
+            &:hover{
+                background-color: #292d33;
+            }
 
-//             &[active]{
-//                 background-color: #292d33;
-//             }
-//         }
-//     }
+            &[active]{
+                background-color: #292d33;
+            }
+        }
+    }
 
-//     .right-container {
-//         margin-left: 56px;
+    .right-container {
+        margin-left: 56px;
 
-//     }
-// }
-
-
+    }
+}
 
 
 
-// #open-dialog-btn{
-//     position: sticky;
-//     left: 0;
-//     bottom: 20px;
-//     margin-right: 1rem;
-//     // margin-bottom: 1rem;
-//     z-index: 9998;
-//     color: #7d7d7d;
-//     background-color: transparent;
-//     border: none;
+
+
+#open-dialog-btn{
+    position: sticky;
+    left: 0;
+    bottom: 20px;
+    margin-right: 1rem;
+    // margin-bottom: 1rem;
+    z-index: 9998;
+    color: #7d7d7d;
+    background-color: transparent;
+    border: none;
 
    
-// }
-// #open-dialog-btn:hover{
-//     color: #fff;
-// }
+}
+#open-dialog-btn:hover{
+    color: #fff;
+}
 
 
 
-// #exp-bar {
-//     position: fixed;
-//     bottom: 0px;
-//     width: 100%;
-//     height: 24px;
-// }
+#exp-bar {
+    position: fixed;
+    bottom: 0px;
+    width: 100%;
+    height: 24px;
+}
 
 
-// #exp-bar-fill {
-//     position: fixed;
-//     bottom: 0px;
-//     left: 0px;
-//     height: 24px;
-// }
+#exp-bar-fill {
+    position: fixed;
+    bottom: 0px;
+    left: 0px;
+    height: 24px;
+}
 
-// .exp-container {
-//     display: flex;
-//     justify-content: flex-end;
-//     position: fixed;
-//     width: 100%;   
-//     bottom: 0px;
-// }
+.exp-container {
+    display: flex;
+    justify-content: flex-end;
+    position: fixed;
+    width: 100%;   
+    bottom: 0px;
+}
 
 
-// .quick-filter-container {
+.quick-filter-container {
 
-//     display: flex;
-//     margin-bottom: 0.5rem;
-//     align-items: center;
-//     -webkit-box-align: center;
+    display: flex;
+    margin-bottom: 0.5rem;
+    align-items: center;
+    -webkit-box-align: center;
 
-//     div {
-//         width: 18px;
-//         height: 18px;
-//         margin-right: var(--chakra-space-3);
-//         border-radius: 50%;
-//         background: var(--chakra-colors-transparent);
-//         border-width: 2px;
-//         border-style: solid;
-//         border-image: initial;        
-//         cursor: pointer;
-//     }
+    div {
+        width: 18px;
+        height: 18px;
+        margin-right: var(--chakra-space-3);
+        border-radius: 50%;
+        background: var(--chakra-colors-transparent);
+        border-width: 2px;
+        border-style: solid;
+        border-image: initial;        
+        cursor: pointer;
+    }
 
-//     .circle-red {
-//         border-color: var(--chakra-colors-red-500);
-//         &:hover {
-//             background-color: var(--chakra-colors-red-300);
-//         }
-//     }
-//     .circle-blue {
-//         border-color: var(--chakra-colors-blue-500);
-//         &:hover {
-//             background-color: var(--chakra-colors-blue-300);
-//         }
-//     }
-//     .circle-cyan {
-//         border-color: var(--chakra-colors-cyan-500);
-//         &:hover {
-//             background-color: var(--chakra-colors-cyan-300);
-//         }
-//     }
-//     .circle-green {
-//         border-color: var(--chakra-colors-green-500);
-//         &:hover {
-//             background-color: var(--chakra-colors-green-300);
-//         }
-//     }
-//     .circle-teal {
-//         border-color: var(--chakra-colors-teal-500);
-//         &:hover {
-//             background-color: var(--chakra-colors-teal-300);
-//         }
-//     }
-//     .circle-orange {
-//         border-color: var(--chakra-colors-orange-500);
-//         &:hover {
-//             background-color: var(--chakra-colors-orange-300);
-//         }
-//     }
-//     .circle-yellow {
-//         border-color: var(--chakra-colors-yellow-500);
-//         &:hover {
-//             background-color: var(--chakra-colors-yellow-300);
-//         }
-//     }
-//     .circle-pink {
-//         border-color: var(--chakra-colors-pink-500);
-//         &:hover {
-//             background-color: var(--chakra-colors-pink-300);
-//         }
-//     }
-//     .circle-purple {
-//         border-color: var(--chakra-colors-purple-500);
-//         &:hover {
-//             background-color: var(--chakra-colors-purple-300);
-//         }
-//     }
+    .circle-red {
+        border-color: var(--chakra-colors-red-500);
+        &:hover {
+            background-color: var(--chakra-colors-red-300);
+        }
+    }
+    .circle-blue {
+        border-color: var(--chakra-colors-blue-500);
+        &:hover {
+            background-color: var(--chakra-colors-blue-300);
+        }
+    }
+    .circle-cyan {
+        border-color: var(--chakra-colors-cyan-500);
+        &:hover {
+            background-color: var(--chakra-colors-cyan-300);
+        }
+    }
+    .circle-green {
+        border-color: var(--chakra-colors-green-500);
+        &:hover {
+            background-color: var(--chakra-colors-green-300);
+        }
+    }
+    .circle-teal {
+        border-color: var(--chakra-colors-teal-500);
+        &:hover {
+            background-color: var(--chakra-colors-teal-300);
+        }
+    }
+    .circle-orange {
+        border-color: var(--chakra-colors-orange-500);
+        &:hover {
+            background-color: var(--chakra-colors-orange-300);
+        }
+    }
+    .circle-yellow {
+        border-color: var(--chakra-colors-yellow-500);
+        &:hover {
+            background-color: var(--chakra-colors-yellow-300);
+        }
+    }
+    .circle-pink {
+        border-color: var(--chakra-colors-pink-500);
+        &:hover {
+            background-color: var(--chakra-colors-pink-300);
+        }
+    }
+    .circle-purple {
+        border-color: var(--chakra-colors-purple-500);
+        &:hover {
+            background-color: var(--chakra-colors-purple-300);
+        }
+    }
     
-//     .circle-gray {
-//         border-color: var(--chakra-colors-gray-500);
-//         &:hover {
-//             background-color: var(--chakra-colors-gray-300);
-//         }
-//     }
-// }
+    .circle-gray {
+        border-color: var(--chakra-colors-gray-500);
+        &:hover {
+            background-color: var(--chakra-colors-gray-300);
+        }
+    }
+}
 
 .type-filter-container {
     display: flex;
     align-items: center;
-
+    flex-wrap: wrap;
     .choice {
         display: flex;
         align-items: center;
+        margin-right: 0.5rem;
         
         .circle {
             width: 18px;
