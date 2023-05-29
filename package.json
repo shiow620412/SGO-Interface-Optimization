@@ -5,8 +5,8 @@
   "main": "sgoScript.js",
   "scripts": {
     "test": "browserify ./src/main.js -p esmify -o ./dist/main.js",
-    "debug": "python debug.py",
-    "release": "python release.py"
+    "debug": "python ./script/debug.py",
+    "release": "python ./script/release.py"
   },
   "author": "",
   "license": "ISC",

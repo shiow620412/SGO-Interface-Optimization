@@ -43,5 +43,5 @@ outputFile.write(f"""// ==UserScript==
 outputFile.writelines(codes)
 outputFile.close()
 shutil.copy("./dist/main_tampermonkey.js", f"./release/sgoScript Ver{newVersion}.js")
-print(f"輸出檔案:./dist/main_tampermonkey.js")
-print(f"輸出檔案:./release/sgoScript Ver{newVersion}.js")
+print(f"輸出檔案:../dist/main_tampermonkey.js")
+print(f"輸出檔案:../release/sgoScript Ver{newVersion}.js")
