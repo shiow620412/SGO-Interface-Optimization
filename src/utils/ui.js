@@ -411,9 +411,10 @@ function createSettingUI(){
                         <p class="description" style="font-size: 1rem; color: var(--chakra-colors-red-300);">
                             希望你已經贊助過茅場晶彥再來贊助我<BR>沒有茅場晶彥做遊戲就不會有此插件
                         </p>
-                        <a style = "color: var(--chakra-colors-blue-300);" href="https://www.buymeacoffee.com/ourcastle">茅場晶彥的 Buy Me a Coffee</a>
-                        <a style = "color: var(--chakra-colors-blue-300);" href="https://www.buymeacoffee.com/sgoeplugin">Wind 的 Buy Me a Coffee</a>                            
-                    
+                        <a target="_blank" style = "color: var(--chakra-colors-blue-300); margin-top: 0.5rem;" href="https://www.buymeacoffee.com/ourcastle">茅場晶彥的 Buy Me a Coffee</a>
+                        <a target="_blank" style = "color: var(--chakra-colors-blue-300); margin-top: 0.5rem;" href="https://www.buymeacoffee.com/sgoeplugin">Wind 的 Buy Me a Coffee</a>                            
+
+                        <a target="_blank" href="https://p.ecpay.com.tw/D6A6802" style="margin-top: 0.5rem;"><img src="https://payment.ecpay.com.tw/Content/themes/WebStyle20170517/images/ecgo.png" /></a>
                     `,
                 }
             ]

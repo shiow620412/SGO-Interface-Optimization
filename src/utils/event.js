@@ -75,6 +75,7 @@ const specialSubscribeEvents = {
 
             const latestVersion = globalVarsStorage.get("LATEST_VERSION");
             let haveNewVersion = false;
+            if(!/[0-9]+\.[0-9]+\.[0-9]+/.test(latestVersion)) return;
             /*
             const setting = JSON.parse(localStorage.getItem("SGO_Interface_Optimization"))
             setting.UPDATE.LAST_CHECK_TIMESTAMP = 0

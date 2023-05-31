@@ -125,24 +125,26 @@ function Init() {
     
 }
 
-function filterTable( ){
+function filterTable(table){
     // if(equipmentFilter.color === "" && equipmentFilter.type === "") return;
 
-    const equipmentTableRow = document.querySelectorAll("#table0-equipments > tbody > tr");
+    const tableRow = table.querySelectorAll("tbody > tr");
 
-    equipmentTableRow.forEach(tr => {
-        const equipmentColor = getComputedStyle(tr.querySelector("td:nth-child(1) > div")).borderColor;
-        const equipmentType = tr.querySelector("td:nth-child(2)").textContent;
-
+    tableRow.forEach(tr => {
+        const rowColor = getComputedStyle(tr.querySelector("td:nth-child(1) > div")).borderColor;
         
-        if(equipmentFilter.color === "" || equipmentFilter.color === equipmentColor){
+        
+        if(table.filter.color === "" || table.filter.color === rowColor){
             tr.style.display = "";
         }else{
             tr.style.display = "none";
             return;
         }
+        
+        if(table.filter.type === undefined) return;
 
-        if(equipmentFilter.type === "" || equipmentFilter.type === equipmentType){
+        const equipmentType = tr.querySelector("td:nth-child(2)").textContent;
+        if(table.filter.type === "" || table.filter.type === equipmentType){
             tr.style.display = "";
         }else{
             tr.style.display = "none";
@@ -154,13 +156,21 @@ function filterTable( ){
 
 
 function createQuickFilter(table) {
-    if(document.querySelector(".quick-filter-container")) return;
+    if(document.querySelectorAll(".quick-filter-container").length === 3) return;
     const quickFilterContainer = document.createElement("div");
     
     quickFilterContainer.classList.add("quick-filter-container");
     quickFilterContainer.innerText = "快篩："
 
-    const colors = ["red", "blue", "cyan", "green", "teal", "orange", "yellow", "pink", "purple", "gray"];
+    if(table.filter) {
+        table.filter.color = "";
+    }else{
+        table.filter = {
+            color: ""
+        }
+    }
+
+    const colors = ["red", "blue", "cyan", "green", "teal", "orange", "yellow", "pink", "purple", "gray"];    
     colors.forEach(color => {
         const circle = document.createElement("div");
         circle.classList.add(`circle-${color}`);
@@ -177,7 +187,9 @@ function createQuickFilter(table) {
                 targetColor = color === "gray" ? "rgba(0, 0, 0, 0)" : getComputedStyle(circle).backgroundColor;
             }
             equipmentFilter.color = targetColor;
-            filterTable();
+
+            table.filter.color = targetColor;
+            filterTable(table);
             // table.querySelectorAll("tr > td:nth-child(1) > div").forEach(div => {
             //     const tr = div.parentElement.parentElement;
             //     if(targetColor === "" || getComputedStyle(div).borderColor === targetColor){
@@ -195,7 +207,7 @@ function createQuickFilter(table) {
 }
 
 function createTypeFilter(table, types) {
-    if(document.querySelector(".type-filter-container")) return;
+    if(document.querySelector(`.type-filter-container`)) return;
 
     const typeFilterContainer = document.createElement("div");
     
@@ -203,6 +215,9 @@ function createTypeFilter(table, types) {
     typeFilterContainer.innerText = "類型："
 
     // const types = ["單手劍", "細劍", "短刀", "單手錘", "盾牌", "雙手劍", "太刀", "雙手斧", "長槍", "大衣", "盔甲", "戒指"];
+    table.filter = {
+        type: "",
+    }
     types.forEach(type => {
         const choice = document.createElement("div");
         const circle = document.createElement("div");
@@ -222,13 +237,14 @@ function createTypeFilter(table, types) {
                 div.style.backgroundColor = ""
             })
 
-            equipmentFilter.type = "";
+            table.filter.type = "";
             if(lastClickCircle !== circle) {
                 circle.style.backgroundColor = `var(--chakra-colors-gray-500)`;
-                equipmentFilter.type = type
+                table.filter.type = type
             }
 
-            filterTable();
+
+            filterTable(table);
         };
 
         typeFilterContainer.appendChild(choice);

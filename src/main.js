@@ -26,7 +26,10 @@ const pageScript = {
 if(settingStorage.get("UPDATE.LAST_CHECK_TIMESTAMP") + globalVarsStorage.get("UPDATE_CHECK_INTERVAEL") < new Date().getTime()) {
 
     fetch("https://sgo-filter.wind-tech.tw/api/version").then(res => res.json()).then((data) => {
+    // fetch("http://localhost/api/version").then(res => res.json()).then((data) => {
         globalVarsStorage.set("LATEST_VERSION", data["version"]);
+    }).catch((err) => {
+        console.error(err);
     })
 }
 

@@ -1,5 +1,5 @@
 const globalVars = {
-    VERSION: "1.37.0",
+    VERSION: "1.37.3",
     LATEST_VERSION: "",
     UPDATE_CHECK_INTERVAEL: 3600,
     HIGHTLIGHT_ROW: {
