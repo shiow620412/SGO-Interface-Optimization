@@ -1,6 +1,7 @@
 # 優化[Sword Gale Online](https://swordgale.online/)介面  
 ## [Greasy Fork ](https://greasyfork.org/zh-TW/scripts/453463-sword-gale-online-%E4%BB%8B%E9%9D%A2%E5%84%AA%E5%8C%96)  
 ## [GitHub](https://github.com/shiow620412/SGO-Interface-Optimization)  
+## [SGO物品過濾器Editor](https://sgo-filter.wind-tech.tw/)
 
 ## 如果你覺得插件對你有幫助，歡迎請我喝杯咖啡 [Buy Me a Coffee](https://www.buymeacoffee.com/sgoeplugin)
 ## 請我喝咖啡之前，先請茅場晶彥喝一杯吧！[茅場晶彥Buy Me a Coffee](https://www.buymeacoffee.com/ourcastle)
