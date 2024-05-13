@@ -92,7 +92,9 @@ function apiEvent(data) {
 
 
         //物品過濾器
-        if(/獲得了.*/.test(message.m)){
+        //Wind獲得了鱗柄白鵝膏 × 2
+        //獲得了蜘蛛絲耗損了 1 點耐久
+        if(message.s === "info" && /獲得了.*/.test(message.m)){
             const itemData = message.m.replace(/.*獲得了/, "").split(" × ");// .replace(/\ \×\ [0-9]+/, "")
             const itemName = itemData[0];
             const itemQuatity = itemData.length > 1 ? Number(itemData[1]) : 1;
